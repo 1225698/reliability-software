@@ -184,7 +184,7 @@
                   <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">数量</th>
                   <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">单机失效率 (/h)</th>
                   <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">单元总失效率 (/h)</th>
-                  <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">Pi (e^(-λ·{{piWindowHours}}))</th>
+                  <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">Pi (e^(-λ·2280}))</th>
                 </tr>
               </thead>
               <tbody>
