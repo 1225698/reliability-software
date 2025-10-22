@@ -27,6 +27,13 @@
                 </div>
               </div>
               <div class="param-item">
+                <label>Pi 时间窗口：</label>
+                <div class="input-with-unit">
+                  <input v-model.number="piWindowHours" type="number" min="1" />
+                  <span class="unit">小时（用于计算 Pi = e^(-λ·窗口)）</span>
+                </div>
+              </div>
+              <div class="param-item">
                 <!-- 环境名称已移除 -->
               </div>
               <div class="param-item">
@@ -133,7 +140,14 @@
               <div class="components-list">
                 <div v-for="(comp, index) in selectedComponents" :key="index" class="component-chip">
                   <span class="chip-main">{{ comp.type }} × {{ comp.quantity }}</span>
-                  <span class="chip-detail">λ={{ comp.failureRate }}/h</span>
+                  <div class="chip-detail">
+                    <label style="margin-right:6px">λ(/h):</label>
+                    <input v-model.number="comp.failureRate" type="number" step="any" style="width:120px;" />
+                  </div>
+                  <div class="chip-detail">
+                    <label style="margin-right:6px">MTBF(h):</label>
+                    <input v-model.number="comp.mtbf" type="number" min="0" step="any" placeholder="可选，优先使用MTBF" style="width:140px;" />
+                  </div>
                   <span class="chip-desc">{{ comp.description }}</span>
                   <button @click="removeComponent(index)" class="remove-btn">删除</button>
                 </div>
@@ -184,7 +198,7 @@
                   <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">数量</th>
                   <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">单机失效率 (/h)</th>
                   <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">单元总失效率 (/h)</th>
-                  <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">Pi (e^(-λ·2280}))</th>
+                  <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">Pi (e^(-λ·2880))</th>
                 </tr>
               </thead>
               <tbody>
@@ -201,6 +215,18 @@
         </div>
       </div>
     </template>
+
+    <template v-else>
+      <div class="blank-section">
+        <h2>任务可靠性分析</h2>
+        <div class="blank-content">
+          <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4c8.svg" alt="任务可靠性" style="width:64px;margin-bottom:16px;">
+          <p>请选择或配置系统参数后进行任务级可靠性分析。</p>
+        </div>
+      </div>
+    </template>
+  </div>
+</template>
 
 <script setup>
 // 为满足 ESLint 的多词组件命名规则，明确设置组件名
@@ -225,10 +251,8 @@ const {
   componentTypeOptions,
   selectedComponents,
   calculationResults,
+  piWindowHours,
   calculateReliability,
-   // 任务相关
-  taskModules,
-  calculateTaskReliability,
   saveAnalysis,
   addComponent,
   removeComponent,
@@ -247,18 +271,6 @@ const componentSummary = computed(() => {
 // 手动添加元器件
 const addManualComponent = () => {
   addComponent(newComponentType.value)
-}
-
-// 计算任务可靠性的 wrapper
-const computeTask = () => {
-  calculateTaskReliability()
-}
-
-const importSystemToTask = () => {
-  // 使用当前 basic 计算的 totalFailureRate 导入为一个模块
-  const tf = (calculationResults.value && calculationResults.value.totalFailureRate) ? calculationResults.value.totalFailureRate : 0
-  const name = (systemName && systemName.value) ? systemName.value : '系统'
-  taskModules.value.push({ name: String(name), failureRate: tf })
 }
 
 // Excel模板下载
