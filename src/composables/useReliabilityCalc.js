@@ -30,8 +30,12 @@ export function useReliabilityCalc() {
       failureRate: 0.00001,
       description: '运算放大器'
     }
+  ])  
+  // 任务级别的模块（每个模块代表若干系统/表决模型的观测故障率）
+  const taskModules = ref([
+    { name: '模块A', failureRate: 0.0005 },
+    { name: '模块B', failureRate: 0.0002 }
   ])
-
   // 计算结果
   const calculationResults = ref({
     totalFailureRate: 0,
@@ -335,7 +339,38 @@ export function useReliabilityCalc() {
 
     return calculationResults.value
   }
+  // 计算任务级可靠性：观测任务故障率 = 各模块 failureRate 之和
+  const calculateTaskReliability = () => {
+    if (!Array.isArray(taskModules.value) || taskModules.value.length === 0) {
+      alert('请先添加任务下的模块并输入故障率')
+      return false
+    }
 
+    // 求和（模块 failureRate 直接视为观测模块失效率）
+    const observedFailureRate = taskModules.value.reduce((s, m) => {
+      const r = parseFloat(m.failureRate)
+      return s + (isNaN(r) ? 0 : r)
+    }, 0)
+
+    // 该任务的基本可靠度 P = e^(-observedFailureRate * t)
+    const taskReliability = Math.exp(-observedFailureRate * missionTime.value)
+
+    // MBTF = 1 / observedFailureRate
+    const taskMBTF = observedFailureRate > 0 ? 1 / observedFailureRate : Infinity
+
+    // 将结果写入 calculationResults，以便 UI 展示
+    calculationResults.value = Object.assign({}, calculationResults.value, {
+      taskResults: {
+        observedFailureRate,
+        taskReliability,
+        taskMBTF,
+        missionTime: missionTime.value
+      },
+      hasResults: true
+    })
+
+    return calculationResults.value.taskResults
+  }
   // 保存分析结果
   const saveAnalysis = () => {
     if (!calculationResults.value.hasResults) {
@@ -397,6 +432,9 @@ export function useReliabilityCalc() {
     selectedComponents,
     calculationResults,
     calculateReliability,
+    // 任务级功能
+    taskModules,
+    calculateTaskReliability,
     saveAnalysis,
     getSavedAnalyses,
     deleteAnalysis,
