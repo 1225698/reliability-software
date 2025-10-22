@@ -198,7 +198,7 @@
                   <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">数量</th>
                   <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">单机失效率 (/h)</th>
                   <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">单元总失效率 (/h)</th>
-                  <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">Pi (e^(-λ·2880))</th>
+                  <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">Pi (e^(-λ·{{piWindowHours}}))</th>
                 </tr>
               </thead>
               <tbody>
@@ -217,11 +217,60 @@
     </template>
 
     <template v-else>
-      <div class="blank-section">
-        <h2>任务可靠性分析</h2>
-        <div class="blank-content">
-          <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4c8.svg" alt="任务可靠性" style="width:64px;margin-bottom:16px;">
-          <p>请选择或配置系统参数后进行任务级可靠性分析。</p>
+      <div class="card-section">
+        <div class="card">
+          <div class="card-title">任务级模块输入</div>
+          <div class="card-content">
+            <p>在此输入组成任务的各模块观测失效率（每个模块的失效率可代表表决模型后的模块故障率）。</p>
+            <div class="template-info" style="margin-top:8px;">
+              <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;padding:8px;border-bottom:1px solid #eee;">模块名</th>
+                    <th style="text-align:right;padding:8px;border-bottom:1px solid #eee;">失效率 (/h)</th>
+                    <th style="text-align:center;padding:8px;border-bottom:1px solid #eee;">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(m, idx) in taskModules" :key="idx">
+                    <td style="padding:8px;border-bottom:1px solid #f5f5f5;"><input v-model="m.name" /></td>
+                    <td style="padding:8px;border-bottom:1px solid #f5f5f5;text-align:right"><input v-model.number="m.failureRate" type="number" step="any" style="width:140px;"/></td>
+                    <td style="padding:8px;border-bottom:1px solid #f5f5f5;text-align:center"><button @click="taskModules.splice(idx,1)" class="remove-btn">删除</button></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;">
+                <button @click="taskModules.push({ name: '新模块', failureRate: 0.0001 })" class="add-manual-btn">+ 添加模块</button>
+                <button @click="importSystemToTask" class="download-btn">从基本可靠性导入系统失效率</button>
+                <button @click="computeTask" class="calculate-btn">计算任务可靠性</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">任务可靠性结果</div>
+          <div class="card-content">
+            <div v-if="calculationResults.taskResults">
+              <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                <div class="result-box purple" style="flex:0 0 220px;">
+                  <div class="result-label">观测任务失效率</div>
+                  <div class="result-value">{{ (calculationResults.taskResults.observedFailureRate).toExponential ? calculationResults.taskResults.observedFailureRate.toExponential(3) : calculationResults.taskResults.observedFailureRate }}</div>
+                </div>
+                <div class="result-box blue" style="flex:0 0 220px;">
+                  <div class="result-label">任务 MTBF</div>
+                  <div class="result-value">{{ isFinite(calculationResults.taskResults.taskMBTF) ? calculationResults.taskResults.taskMBTF.toFixed(2) : '∞' }} h</div>
+                </div>
+                <div class="result-box pink" style="flex:0 0 220px;">
+                  <div class="result-label">任务基本可靠度 P</div>
+                  <div class="result-value">{{ (calculationResults.taskResults.taskReliability * 100).toFixed(4) }}%</div>
+                </div>
+              </div>
+            </div>
+            <div v-else>
+              <p>请在上方输入模块并点击“计算任务可靠性”。</p>
+            </div>
+          </div>
         </div>
       </div>
     </template>
@@ -253,6 +302,9 @@ const {
   calculationResults,
   piWindowHours,
   calculateReliability,
+  // 任务相关
+  taskModules,
+  calculateTaskReliability,
   saveAnalysis,
   addComponent,
   removeComponent,
@@ -271,6 +323,18 @@ const componentSummary = computed(() => {
 // 手动添加元器件
 const addManualComponent = () => {
   addComponent(newComponentType.value)
+}
+
+// 计算任务可靠性的 wrapper
+const computeTask = () => {
+  calculateTaskReliability()
+}
+
+const importSystemToTask = () => {
+  // 使用当前 basic 计算的 totalFailureRate 导入为一个模块
+  const tf = (calculationResults.value && calculationResults.value.totalFailureRate) ? calculationResults.value.totalFailureRate : 0
+  const name = (systemName && systemName.value) ? systemName.value : '系统'
+  taskModules.value.push({ name: String(name), failureRate: tf })
 }
 
 // Excel模板下载
@@ -985,3 +1049,4 @@ const saveAndView = () => {
   }
 }
 </style>
+
