@@ -980,6 +980,27 @@ const saveAndView = () => {
   flex: 1;
   min-width: 0;
 }
+.param-item input {
+  height: 32px; /* 固定高度 */
+  box-sizing: border-box; /* 包含内边距和边框 */
+}
+
+.input-with-unit {
+  width: 100%; /* 确保带单位的容器占满宽度 */
+}
+
+.input-with-unit input {
+  flex: 1; /* 输入框占满容器剩余空间 */
+  height: 32px; /* 与系统名称输入框高度一致 */
+  box-sizing: border-box;
+}
+
+.input-with-unit .unit {
+  margin-left: 8px;
+  line-height: 32px; /* 与输入框高度一致，垂直居中 */
+  white-space: normal; /* 允许长单位文本换行 */
+  max-width: 150px; /* 限制单位最大宽度，避免压缩输入框 */
+}
 
 .param-item input:focus,
 .param-item select:focus {
