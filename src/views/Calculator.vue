@@ -33,12 +33,6 @@
                   <span class="unit">小时（用于计算 Pi = e^(-λ·窗口)）</span>
                 </div>
               </div>
-              <div class="param-item">
-                <!-- 环境名称已移除 -->
-              </div>
-              <div class="param-item">
-                <!-- 环境因子已移除 -->
-              </div>
             </div>
           </div>
         </div>
