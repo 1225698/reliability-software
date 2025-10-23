@@ -30,7 +30,7 @@
                 <label>Pi 时间窗口：</label>
                 <div class="input-with-unit">
                   <input v-model.number="piWindowHours" type="number" min="1" />
-                  <span class="unit">小时（用于计算 Pi = e^(-λ·窗口)）</span>
+                  <span class="unit">小时</span>
                 </div>
               </div>
             </div>
