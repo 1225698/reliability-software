@@ -525,8 +525,26 @@ const uploadError = ref(null)
 const moduleErrors = ref([])
 
 // 🆕 新增：保存系统相关状态
-const savedBasicSystems = ref([])
-const importedSystems = ref([])
+// 使用 shallowRef 优化，只响应 .value 的整体变化
+const savedBasicSystems = shallowRef([]);
+const importedSystems = shallowRef([]);
+
+// 当需要更新数组时，直接替换整个数组（这是关键！）
+const saveCurrentSystem = () => {
+  // ... 您的现有逻辑
+  
+  // 不再使用 push，而是创建新数组赋值
+  const existingIndex = savedBasicSystems.value.findIndex(sys => sys.name === systemData.name);
+  if (existingIndex !== -1) {
+    // 替换特定元素
+    const updatedSystems = [...savedBasicSystems.value];
+    updatedSystems[existingIndex] = systemData;
+    savedBasicSystems.value = updatedSystems; // 直接赋值
+  } else {
+    // 添加新元素
+    savedBasicSystems.value = [...savedBasicSystems.value, systemData];
+  }
+};
 const savedTaskResults = ref([])
 const newSystem = ref({
   name: '',
