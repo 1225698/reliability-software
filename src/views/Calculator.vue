@@ -544,7 +544,7 @@ const saveCurrentSystem = () => {
     // 添加新元素
     savedBasicSystems.value = [...savedBasicSystems.value, systemData];
   }
-};
+})
 const savedTaskResults = ref([])
 const newSystem = ref({
   name: '',
