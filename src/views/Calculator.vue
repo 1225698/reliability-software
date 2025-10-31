@@ -304,15 +304,48 @@
             <!-- 操作按钮 -->
             <div class="task-module-actions" style="margin-bottom: 20px;">
               <button 
-                @click="addSystemVoteModule" 
+                @click="showSystemSelection = true" 
                 class="calculate-btn"
                 :disabled="importedSystems.length === 0"
               >
-                📌 基于导入系统创建表决模块
+                📌 从导入系统中选择创建表决模块
               </button>
               <p class="template-tip" v-if="importedSystems.length === 0">
                 ⚠️ 请先导入系统数据，再创建表决模块
               </p>
+            </div>
+
+            <!-- 系统选择模态框 -->
+            <div v-if="showSystemSelection" class="modal-overlay" @click="showSystemSelection = false">
+              <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                  <h3>选择系统用于表决模块</h3>
+                  <button class="close-btn" @click="showSystemSelection = false">×</button>
+                </div>
+                <div class="modal-body">
+                  <div class="systems-selection-grid">
+                    <div 
+                      v-for="(system, index) in importedSystems" 
+                      :key="system.id" 
+                      class="system-selection-item"
+                      :class="{ selected: selectedSystemsForVote.includes(index) }"
+                      @click="toggleSystemSelection(index)"
+                    >
+                      <div class="system-name">{{ system.name }}</div>
+                      <div class="system-details">
+                        <div>失效率: {{ system.totalFailureRate.toExponential(6) }}/h</div>
+                        <div>任务时间: {{ system.missionTime }}h</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button @click="createVoteModuleFromSelected" class="calculate-btn" :disabled="selectedSystemsForVote.length === 0">
+                      创建表决模块
+                    </button>
+                    <button @click="showSystemSelection = false" class="remove-btn">取消</button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- 系统表决模块内容 -->
@@ -351,7 +384,7 @@
                       </div>
                       <div class="module-info-item" style="margin-top: 8px;">
                         <label>包含系统：</label>
-                        <span class="system-count">{{ importedSystems.length }} 个</span>
+                        <span class="system-count">{{ voteModule.selectedSystems ? voteModule.selectedSystems.length : 0 }} 个</span>
                       </div>
                     </td>
 
@@ -406,7 +439,16 @@
                         />
                         <span class="unit" style="margin-left: 4px;">/h</span>
                       </div>
-                      <p class="param-tip" style="margin-top: 8px; font-size: 0.8rem; color: #28a745;">
+                      <div style="margin-top: 8px;">
+                        <button 
+                          @click="saveVotingModule" 
+                          class="save-btn"
+                          :disabled="!isVoteCalculated"
+                        >
+                          保存表决模块
+                        </button>
+                      </div>
+                      <p class="param-tip" style="margin-top: 8px; font-size: 0.8rem; color: #28a745;" v-if="isVoteCalculated">
                         ✅ 可直接参与任务可靠性计算
                       </p>
                     </td>
@@ -423,6 +465,44 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+            
+            <!-- 已保存的表决模块列表 -->
+            <div v-if="savedVotingModules.length > 0" class="saved-modules-section">
+              <h4>已保存的表决模块</h4>
+              <div class="saved-modules-grid">
+                <div 
+                  v-for="(module, index) in savedVotingModules" 
+                  :key="index" 
+                  class="saved-module-card"
+                >
+                  <div class="saved-module-header">
+                    <h5>{{ module.name }}</h5>
+                    <button @click="removeSavedVotingModule(index)" class="remove-btn small">×</button>
+                  </div>
+                  <div class="saved-module-content">
+                    <div class="module-detail">
+                      <span>基本失效率:</span>
+                      <strong>{{ module.baseFailureRate.toExponential(6) }}/h</strong>
+                    </div>
+                    <div class="module-detail">
+                      <span>等效故障率:</span>
+                      <strong>{{ module.failureRate.toExponential(6) }}/h</strong>
+                    </div>
+                    <div class="module-detail">
+                      <span>系统数量:</span>
+                      <strong>{{ module.selectedSystems.length }} 个</strong>
+                    </div>
+                    <div class="module-detail">
+                      <span>表决模型:</span>
+                      <strong>N={{ module.voteParams.N}}, k={{ module.voteParams.k }}</strong>
+                    </div>
+                    <button @click="useSavedVotingModule(index)" class="download-btn small" style="margin-top: 10px;">
+                      使用此模块
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -460,7 +540,7 @@
               </div>
             </div>
             <div v-else>
-              <p>请导入系统数据并创建表决模块后，点击下方按钮计算任务可靠性</p>
+              <p>请先导入系统数据，然后点击下方按钮计算任务可靠性</p>
               <button @click="computeTask" class="calculate-btn" style="margin-top: 16px;">
                 计算任务可靠性
               </button>
@@ -538,6 +618,9 @@ const newSystem = ref({
 const systemVoteModuleAdded = ref(false)
 const isVoteCalculated = ref(false)
 const isVoteParamsValid = ref(false)
+const showSystemSelection = ref(false)
+const selectedSystemsForVote = ref([])
+const savedVotingModules = ref([])
 
 const voteModule = ref({
   name: '',
@@ -657,6 +740,11 @@ const importAllToTaskReliability = () => {
 
   alert(`成功导入 ${importedSystems.value.length} 个系统到任务可靠性`)
   
+  // 自动计算任务可靠性
+  setTimeout(() => {
+    computeTask()
+  }, 100)
+  
   // 切换到任务可靠性标签页
   showMain.value = false
 }
@@ -688,18 +776,34 @@ const importFromSavedSystems = () => {
   })
 
   alert(`成功导入 ${systemsToImport.length} 个系统`)
+  
+  // 自动计算任务可靠性
+  setTimeout(() => {
+    computeTask()
+  }, 100)
 }
 
 const clearImportedSystems = () => {
   if (confirm('确定要清空所有导入的系统吗？')) {
     importedSystems.value = []
     alert('已清空所有导入的系统')
+    
+    // 清空计算结果
+    calculationResults.value.taskResults = null
+    calculationResults.value.hasResults = false
   }
 }
 
 // 原有的导入系统方法
 const removeImportedSystem = (id) => {
   importedSystems.value = importedSystems.value.filter(sys => sys.id !== id)
+  
+  // 重新计算任务可靠性
+  if (importedSystems.value.length > 0) {
+    setTimeout(() => {
+      computeTask()
+    }, 100)
+  }
 }
 
 const isManualSystemValid = computed(() => {
@@ -733,6 +837,11 @@ const addManualSystem = () => {
   }
   
   alert(`系统 "${systemData.name}" 已添加`)
+  
+  // 自动计算任务可靠性
+  setTimeout(() => {
+    computeTask()
+  }, 100)
 }
 
 // 🆕 新增：任务可靠性结果保存
@@ -788,9 +897,6 @@ const loadTaskResultsFromStorage = () => {
     console.error('加载任务结果失败:', error)
   }
 }
-
-// 其余现有方法保持不变...
-// [原有的所有其他方法保持不变，包括：initModuleErrors, componentSummary, addManualComponent, computeTask, addSystemVoteModule, removeSystemVoteModule, validateVoteParams, calculateVoteFailureRate, factorial, validateModuleName, validateFailureRate, downloadTemplate, triggerFileInput, handleFileUpload, handleDrop, handleDragOver, handleDragLeave, processExcelFile, saveAndView]
 
 // 初始化模块错误信息
 const initModuleErrors = () => {
@@ -874,12 +980,122 @@ const addSystemVoteModule = () => {
   }, 100)
 }
 
-// 删除系统表决模块
-const removeSystemVoteModule = () => {
-  systemVoteModuleAdded.value = false
+// 创建新的表决模块选择系统功能
+const toggleSystemSelection = (index) => {
+  const currentIndex = selectedSystemsForVote.value.indexOf(index)
+  if (currentIndex === -1) {
+    selectedSystemsForVote.value.push(index)
+  } else {
+    selectedSystemsForVote.value.splice(currentIndex, 1)
+  }
+}
+
+// 创建基于选定系统的表决模块
+const createVoteModuleFromSelected = () => {
+  if (selectedSystemsForVote.value.length === 0) {
+    alert('请至少选择一个系统')
+    return
+  }
+
+  // 计算选中系统的串联失效率
+  const selectedSystems = selectedSystemsForVote.value.map(index => importedSystems.value[index])
+  const totalFailureRate = selectedSystems.reduce((sum, sys) => sum + sys.totalFailureRate, 0)
+  const baseFailureRate = parseFloat(totalFailureRate.toFixed(8))
+
+  const moduleName = `表决模块_${selectedSystems.length}系统串联`
+  
+  voteModule.value = {
+    name: moduleName,
+    baseFailureRate: baseFailureRate,
+    failureRate: 0,
+    selectedSystems: [...selectedSystems] // 保存选中的系统信息
+  }
+
+  taskModules.value = [voteModule.value]
+  systemVoteModuleAdded.value = true
   isVoteCalculated.value = false
-  taskModules.value = []
-  voteParamErrors.value = { N: '', k: '' }
+  isVoteParamsValid.value = false
+  
+  // 清空选择
+  selectedSystemsForVote.value = []
+  showSystemSelection.value = false
+
+  setTimeout(() => {
+    const voteModuleEl = document.querySelector('.vote-module-container')
+    if (voteModuleEl) voteModuleEl.scrollIntoView({ behavior: 'smooth' })
+  }, 100)
+}
+
+// 保存表决模块
+const saveVotingModule = () => {
+  if (!isVoteCalculated.value) {
+    alert('请先计算等效故障率')
+    return
+  }
+
+  const moduleToSave = {
+    ...voteModule.value,
+    voteParams: { ...voteParams.value }
+  }
+
+  savedVotingModules.value.push(moduleToSave)
+  saveVotingModulesToStorage()
+  alert(`表决模块 "${voteModule.value.name}" 已保存`)
+}
+
+// 使用已保存的表决模块
+const useSavedVotingModule = (index) => {
+  const savedModule = savedVotingModules.value[index]
+  
+  voteModule.value = {
+    name: savedModule.name,
+    baseFailureRate: savedModule.baseFailureRate,
+    failureRate: savedModule.failureRate,
+    selectedSystems: [...savedModule.selectedSystems]
+  }
+  
+  voteParams.value = { ...savedModule.voteParams }
+  taskModules.value = [voteModule.value]
+  systemVoteModuleAdded.value = true
+  isVoteCalculated.value = true
+  isVoteParamsValid.value = true
+  
+  setTimeout(() => {
+    const voteModuleEl = document.querySelector('.vote-module-container')
+    if (voteModuleEl) voteModuleEl.scrollIntoView({ behavior: 'smooth' })
+  }, 100)
+  
+  alert(`已加载表决模块 "${savedModule.name}"`)
+}
+
+// 删除已保存的表决模块
+const removeSavedVotingModule = (index) => {
+  if (confirm('确定要删除这个保存的表决模块吗？')) {
+    savedVotingModules.value.splice(index, 1)
+    saveVotingModulesToStorage()
+    alert('表决模块已删除')
+  }
+}
+
+// 保存表决模块到本地存储
+const saveVotingModulesToStorage = () => {
+  try {
+    localStorage.setItem('savedVotingModules', JSON.stringify(savedVotingModules.value))
+  } catch (error) {
+    console.error('保存表决模块失败:', error)
+  }
+}
+
+// 从本地存储加载表决模块
+const loadVotingModulesFromStorage = () => {
+  try {
+    const saved = localStorage.getItem('savedVotingModules')
+    if (saved) {
+      savedVotingModules.value = JSON.parse(saved)
+    }
+  } catch (error) {
+    console.error('加载表决模块失败:', error)
+  }
 }
 
 // 验证表决参数
@@ -1054,6 +1270,7 @@ const saveAndView = () => {
 onMounted(() => {
   loadSystemsFromStorage()
   loadTaskResultsFromStorage()
+  loadVotingModulesFromStorage()
 })
 </script>
 
@@ -1231,6 +1448,170 @@ onMounted(() => {
   font-size: 0.8rem;
 }
 
+/* 🆕 新增：表决模块样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 16px;
+  background: #667eea;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.systems-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.system-selection-item {
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.system-selection-item:hover {
+  border-color: #667eea;
+}
+
+.system-selection-item.selected {
+  border-color: #667eea;
+  background-color: #eef1ff;
+}
+
+.system-name {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #2c3e50;
+}
+
+.system-details {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.saved-modules-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+}
+
+.saved-modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.saved-module-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.3s;
+}
+
+.saved-module-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.saved-module-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.saved-module-header h5 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.saved-module-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.module-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+}
+
+.module-detail span {
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+.module-detail strong {
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.small {
+  padding: 6px 12px;
+  font-size: 0.9rem;
+}
+
 /* 批量导入区域样式 */
 .batch-import-section {
   margin-bottom: 20px;
@@ -1244,9 +1625,6 @@ onMounted(() => {
   margin-bottom: 8px;
   flex-wrap: wrap;
 }
-
-/* 其余现有样式保持不变... */
-/* [所有原有的样式代码保持不变] */
 
 /* 系统参数样式 */
 .param-grid {
@@ -1464,7 +1842,7 @@ onMounted(() => {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  padding: 12px 30px;
+  padding: 12px 36px;
   font-size: 1.1rem;
   border-radius: 25px;
   cursor: pointer;
