@@ -291,6 +291,25 @@
 
         <!-- 已移除系统表决模块卡片，功能转为按钮触发弹窗 -->
 
+        <!-- 任务参数板块 -->
+        <div class="card" style="margin-bottom:18px;">
+          <div class="card-title">任务参数</div>
+          <div class="card-content">
+            <div class="param-grid">
+              <div class="param-item">
+                <label>任务名称：</label>
+                <input v-model="taskName" placeholder="请输入任务名称" />
+              </div>
+              <div class="param-item">
+                <label>任务时间：</label>
+                <div class="input-with-unit">
+                  <input v-model.number="missionTime" type="number" min="0" />
+                  <span class="unit">小时</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <!-- 任务模块组成卡片 -->
         <div class="card">
           <div class="card-title">任务模块组成</div>
@@ -317,11 +336,17 @@
                   <!-- 步骤一：选择系统 -->
                   <template v-if="voteStep === 1">
                     <div class="systems-selection-grid">
-                      <div v-for="(system, index) in importedSystems" :key="system.id" class="system-selection-item" :class="{ selected: selectedSystemsForVote.includes(index) }" @click="toggleSystemSelection(index)">
-                        <div class="system-name">{{ system.name }}</div>
-                        <div class="system-details">
+                      <div v-for="(system, index) in importedSystems" :key="system.id" class="system-selection-item" :class="{ selected: selectedSystemsForVote.includes(index) }">
+                        <div class="system-name" @click="toggleSystemSelection(index)">{{ system.name }}</div>
+                        <div class="system-details" @click="toggleSystemSelection(index)">
                           <div>失效率: {{ system.totalFailureRate.toExponential(6) }}/h</div>
                           <div>任务时间: {{ system.missionTime }}h</div>
+                        </div>
+                        <div class="count-editor" v-if="selectedSystemsForVote.includes(index)">
+                          <span class="count-label">数量:</span>
+                          <button class="count-btn" @click="adjustSelectedCount(index,-1)" :disabled="selectedCounts[index]<=1">-</button>
+                          <input class="count-input" v-model.number="selectedCounts[index]" @change="normalizeSelectedCount(index)" />
+                          <button class="count-btn" @click="adjustSelectedCount(index,1)">+</button>
                         </div>
                       </div>
                     </div>
@@ -344,7 +369,7 @@
                       <tbody>
                         <tr>
                           <td>
-                            <div class="module-info-item"><label>模块名：</label><input v-model="voteModule.name" class="task-input" readonly style="background:#f5f7fa;cursor:default;" /></div>
+                            <div class="module-info-item"><label>模块名：</label><input v-model="voteModule.name" class="task-input" placeholder="输入表决模块名称" /></div>
                             <div class="module-info-item" style="margin-top:8px;"><label>基本失效率：</label><input v-model="voteModule.baseFailureRate" class="task-input" readonly style="background:#f5f7fa;cursor:default;" /><span class="unit" style="margin-left:4px;">/h</span></div>
                             <div class="module-info-item" style="margin-top:8px;"><label>包含系统：</label><span class="system-count">{{ voteModule.selectedSystems ? voteModule.selectedSystems.length : 0 }} 个</span></div>
                           </td>
@@ -389,9 +414,25 @@
                       <span>来源类型:</span>
                       <strong>{{ mod.sourceType==='system' ? '系统' : '表决模块' }}</strong>
                     </div>
+                    <div class="assembly-row" v-if="mod.sourceType==='system' || mod.sourceType==='vote-module'">
+                      <span>数量:</span>
+                      <strong style="display:flex;align-items:center;gap:6px;">
+                        <button class="count-btn" @click="updateSystemModuleCount(mod,-1)" :disabled="(mod.count||1)<=1">-</button>
+                        <input class="count-input" v-model.number="mod.count" @change="mod.count = Math.max(1, Math.round(mod.count||1))" />
+                        <button class="count-btn" @click="updateSystemModuleCount(mod,1)">+</button>
+                      </strong>
+                    </div>
                     <div class="assembly-row">
                       <span>失效率:</span>
-                      <strong>{{ mod.failureRate.toExponential(6) }}/h</strong>
+                      <strong>
+                        <template v-if="(mod.sourceType==='system' || mod.sourceType==='vote-module') && (mod.count||1) > 1">
+                          {{ (mod.failureRate * mod.count).toExponential(6) }} /h
+                          <span style="color:#666;font-size:.7rem;">(单个 {{ mod.failureRate.toExponential(6) }})</span>
+                        </template>
+                        <template v-else>
+                          {{ mod.failureRate.toExponential(6) }} /h
+                        </template>
+                      </strong>
                     </div>
                   </div>
                 </div>
@@ -455,12 +496,12 @@
             <div class="saved-task-results">
               <div v-for="result in savedTaskResults" :key="result.id" class="saved-task-card">
                 <div class="saved-task-header">
-                  <h4>任务可靠性分析</h4>
+                  <h4>{{ result.taskName || '任务可靠性分析' }}</h4>
                   <button @click="removeSavedTaskResult(result.id)" class="remove-btn small">×</button>
                 </div>
                 <div class="saved-task-details">
                   <div class="task-result-row">
-                    <span>系统数量:</span>
+                    <span>参与系统数量:</span>
                     <strong>{{ result.systemCount }} 个</strong>
                   </div>
                   <div class="task-result-row">
@@ -525,6 +566,8 @@ const isVoteCalculated = ref(false)
 const isVoteParamsValid = ref(false)
 const showSystemSelection = ref(false) // 控制表决模块弹窗显隐
 const selectedSystemsForVote = ref([])
+// 与 selectedSystemsForVote 索引对应的数量（默认为1）
+const selectedCounts = ref([]) // index -> count
 const savedVotingModules = ref([])
 
 const voteModule = ref({
@@ -542,6 +585,9 @@ const voteParamErrors = ref({
   N: '',
   k: ''
 })
+// (已移除单独的表决模块任务时间，统一使用全局 missionTime)
+// 任务名称（任务可靠性保存时使用）
+const taskName = ref('')
 
 // 从组合式函数获取数据和方法
 const {
@@ -752,9 +798,20 @@ const saveTaskReliabilityResults = () => {
     return
   }
 
+  // 参与系统数量：任务模块列表中所有 system 模块的数量总和 + 所有表决模块展开的系统数量总和
+  const participatingSystemCount = taskAssemblyModules.value.reduce((acc, m) => {
+    if (m.sourceType === 'system') {
+      return acc + (m.count || 1)
+    } else if (m.sourceType === 'vote-module' && Array.isArray(m.selectedSystems)) {
+      return acc + m.selectedSystems.reduce((s, sys) => s + (sys.count || 1), 0)
+    }
+    return acc
+  }, 0)
+
   const taskResult = {
     id: Date.now(),
-    systemCount: importedSystems.value.length,
+    taskName: taskName.value.trim(),
+    systemCount: participatingSystemCount,
     observedFailureRate: calculationResults.value.taskResults.observedFailureRate,
     taskReliability: calculationResults.value.taskResults.taskReliability,
     taskMBTF: calculationResults.value.taskResults.taskMBTF,
@@ -814,8 +871,16 @@ const addSystemModuleIfMissing = (system) => {
     name: system.name,
     sourceType: 'system',
     failureRate: system.totalFailureRate,
-    originalSystemId: system.id
+    originalSystemId: system.id,
+    count: 1
   })
+}
+// 更新系统模块数量
+const updateSystemModuleCount = (mod, delta) => {
+  if (mod.sourceType !== 'system') return
+  const newCount = (mod.count || 1) + delta
+  if (newCount < 1) return
+  mod.count = newCount
 }
 initModuleErrors()
 
@@ -849,7 +914,9 @@ const computeTask = () => {
     id: `auto-${sys.id}`,
     name: sys.name,
     sourceType: 'system',
-    failureRate: sys.totalFailureRate
+    failureRate: sys.totalFailureRate,
+    originalSystemId: sys.id,
+    count: 1
   }))
   computeTaskFromAssembly(true)
 }
@@ -860,7 +927,7 @@ const computeTaskFromAssembly = (autoGenerated = false) => {
     alert('任务模块列表为空')
     return
   }
-  const totalObservedFailureRate = taskAssemblyModules.value.reduce((sum, m) => sum + m.failureRate, 0)
+  const totalObservedFailureRate = taskAssemblyModules.value.reduce((sum, m) => sum + m.failureRate * (m.count || 1), 0)
   const taskReliability = Math.exp(-totalObservedFailureRate * missionTime.value)
   const taskMBTF = totalObservedFailureRate > 0 ? 1 / totalObservedFailureRate : Infinity
   calculationResults.value.taskResults = {
@@ -868,10 +935,10 @@ const computeTaskFromAssembly = (autoGenerated = false) => {
     taskReliability,
     taskMBTF,
     missionTime: missionTime.value,
-    systemCount: taskAssemblyModules.value.length
+    systemCount: taskAssemblyModules.value.reduce((c,m)=> c + (m.count || 1), 0)
   }
   calculationResults.value.hasResults = true
-  alert(`任务可靠性计算完成！\n基于 ${taskAssemblyModules.value.length} 个任务模块串联\n总失效率: ${totalObservedFailureRate.toExponential(6)}/h${autoGenerated ? '\n(自动从系统生成临时任务模块)' : ''}`)
+  alert(`任务可靠性计算完成！\n基于 ${taskAssemblyModules.value.reduce((c,m)=> c+(m.count||1),0)} 个任务模块串联\n总失效率: ${totalObservedFailureRate.toExponential(6)}/h${autoGenerated ? '\n(自动从系统生成临时任务模块)' : ''}`)
 }
 
 
@@ -885,7 +952,7 @@ const clearTaskAssemblyModules = () => {
   }
 }
 
-const totalTaskAssemblyFailureRate = computed(() => taskAssemblyModules.value.reduce((s,m)=>s+m.failureRate,0))
+const totalTaskAssemblyFailureRate = computed(() => taskAssemblyModules.value.reduce((s,m)=>s + m.failureRate * (m.count || 1),0))
 
 // 添加系统表决模块 - 基于导入系统
 // (已移除未使用的 addSystemVoteModule 函数以减少未使用代码)
@@ -895,8 +962,10 @@ const toggleSystemSelection = (index) => {
   const currentIndex = selectedSystemsForVote.value.indexOf(index)
   if (currentIndex === -1) {
     selectedSystemsForVote.value.push(index)
+    if (!selectedCounts.value[index]) selectedCounts.value[index] = 1
   } else {
     selectedSystemsForVote.value.splice(currentIndex, 1)
+    // 保留数量以便再次选中时仍记忆，可选择是否清除，这里暂不清除
   }
 }
 
@@ -908,8 +977,11 @@ const createVoteModuleFromSelected = () => {
   }
 
   // 计算选中系统的串联失效率
-  const selectedSystems = selectedSystemsForVote.value.map(index => importedSystems.value[index])
-  const totalFailureRate = selectedSystems.reduce((sum, sys) => sum + sys.totalFailureRate, 0)
+  const selectedSystems = selectedSystemsForVote.value.map(index => ({
+    system: importedSystems.value[index],
+    count: selectedCounts.value[index] || 1
+  }))
+  const totalFailureRate = selectedSystems.reduce((sum, item) => sum + item.system.totalFailureRate * item.count, 0)
   const baseFailureRate = parseFloat(totalFailureRate.toFixed(8))
 
   const moduleName = `表决模块_${selectedSystems.length}系统串联`
@@ -918,12 +990,25 @@ const createVoteModuleFromSelected = () => {
     name: moduleName,
     baseFailureRate: baseFailureRate,
     failureRate: 0,
-    selectedSystems: [...selectedSystems] // 保存选中的系统信息
+    selectedSystems: selectedSystems.map(s => ({ id: s.system.id, name: s.system.name, failureRate: s.system.totalFailureRate, count: s.count }))
   }
   // 进入第二步：参数配置
   voteStep.value = 2
   isVoteCalculated.value = false
   isVoteParamsValid.value = false
+}
+// 调整选中系统数量
+const adjustSelectedCount = (index, delta) => {
+  const current = selectedCounts.value[index] || 1
+  const next = current + delta
+  if (next < 1) return
+  selectedCounts.value[index] = next
+}
+const normalizeSelectedCount = (index) => {
+  let val = selectedCounts.value[index]
+  if (!Number.isFinite(val) || val < 1) val = 1
+  val = Math.round(val)
+  selectedCounts.value[index] = val
 }
 
 // 保存表决模块
@@ -947,7 +1032,8 @@ const saveVotingModule = () => {
     id: `vote-${Date.now()}`,
     name: voteModule.value.name,
     sourceType: 'vote-module',
-    failureRate: voteModule.value.failureRate
+    failureRate: voteModule.value.failureRate,
+    count: 1
   })
 
   // 重新计算任务可靠性（如果已有模块）
@@ -1454,6 +1540,13 @@ onMounted(() => {
   border-color: #667eea;
   background-color: #eef1ff;
 }
+.count-editor { margin-top:10px; display:flex; align-items:center; gap:6px; }
+.count-label { font-size:.75rem; color:#555; }
+.system-selection-item .count-btn { background:#667eea; color:#fff; border:none; width:24px; height:24px; border-radius:6px; cursor:pointer; font-weight:600; display:flex; align-items:center; justify-content:center; }
+.system-selection-item .count-btn:disabled { opacity:.35; cursor:not-allowed; }
+.system-selection-item .count-btn:not(:disabled):hover { background:#5468d4; }
+.system-selection-item .count-input { width:42px; text-align:center; border:1px solid #d1d5db; border-radius:6px; padding:4px 6px; font-size:.75rem; }
+.system-selection-item .count-input:focus { outline:none; border-color:#667eea; }
 
 .system-name {
   font-weight: bold;
@@ -1570,6 +1663,11 @@ onMounted(() => {
 .assembly-row { display:flex; justify-content:space-between; font-size:.8rem; }
 .assembly-summary { margin-top:16px; padding:10px 14px; background:#f8f9fa; border-radius:6px; font-size:.85rem; border-left:4px solid #667eea; }
 .assembly-actions { margin-top:14px; display:flex; gap:12px; flex-wrap:wrap; }
+.count-btn { background:#667eea; color:#fff; border:none; width:24px; height:24px; border-radius:6px; cursor:pointer; font-weight:600; display:flex; align-items:center; justify-content:center; }
+.count-btn:disabled { opacity:.35; cursor:not-allowed; }
+.count-btn:not(:disabled):hover { background:#5468d4; }
+.count-input { width:42px; text-align:center; border:1px solid #d1d5db; border-radius:6px; padding:4px 6px; font-size:.85rem; }
+.count-input:focus { outline:none; border-color:#667eea; }
 
 .module-detail {
   display: flex;
