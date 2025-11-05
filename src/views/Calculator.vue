@@ -320,7 +320,7 @@
             <div class="module-ops-bar">
               <button class="ops-btn purple" @click="openAddSystemModal('import')">导入系统</button>
               <button class="ops-btn green" @click="openAddSystemModal('manual')">手动添加</button>
-              <button class="ops-btn orange" @click="openVoteModal" :disabled="importedSystems.length===0">创建表决模块</button>
+              <button class="ops-btn orange" @click="openVoteModal" :disabled="!canCreateVoteModule">创建表决模块</button>
               <button class="ops-btn danger" @click="clearImportedSystems" :disabled="importedSystems.length===0">清空系统</button>
               <span class="ops-count">已加载: {{ importedSystems.length }}</span>
             </div>
@@ -336,11 +336,14 @@
                   <!-- 步骤一：选择系统 -->
                   <template v-if="voteStep === 1">
                     <div class="systems-selection-grid">
-                      <div v-for="(system, index) in importedSystems" :key="system.id" class="system-selection-item" :class="{ selected: selectedSystemsForVote.includes(index) }">
-                        <div class="system-name" @click="toggleSystemSelection(index)">{{ system.name }}</div>
+                      <div v-for="(item, index) in selectionPool" :key="item.kind + '-' + item.id + '-' + index" class="system-selection-item" :class="{ selected: selectedSystemsForVote.includes(index), 'vote-kind': item.kind==='vote' }">
+                        <div class="system-name" @click="toggleSystemSelection(index)">
+                          {{ item.name }}<span v-if="item.kind==='vote'" class="badge">表决</span>
+                        </div>
                         <div class="system-details" @click="toggleSystemSelection(index)">
-                          <div>失效率: {{ system.totalFailureRate.toExponential(6) }}/h</div>
-                          <div>任务时间: {{ system.missionTime }}h</div>
+                          <div>{{ item.kind==='vote' ? '等效故障率' : '失效率' }}: {{ item.failureRate.toExponential(6) }}/h</div>
+                          <div v-if="item.kind==='system'">任务时间: {{ item.missionTime }}h</div>
+                          <div v-else>类型: 表决模块</div>
                         </div>
                         <div class="count-editor" v-if="selectedSystemsForVote.includes(index)">
                           <span class="count-label">数量:</span>
@@ -588,6 +591,33 @@ const voteParamErrors = ref({
 // (已移除单独的表决模块任务时间，统一使用全局 missionTime)
 // 任务名称（任务可靠性保存时使用）
 const taskName = ref('')
+
+// 已存在的表决模块（来自任务模块列表，sourceType 为 vote-module 且已计算出等效故障率）
+const existingVoteModules = computed(() => taskAssemblyModules.value.filter(m => m.sourceType === 'vote-module' && m.failureRate && m.failureRate > 0))
+
+// 选择列表：基础系统 + 已有表决模块
+const selectionPool = computed(() => {
+  const systems = importedSystems.value.map(sys => ({
+    kind: 'system',
+    id: sys.id,
+    name: sys.name,
+    failureRate: sys.totalFailureRate,
+    missionTime: sys.missionTime,
+    ref: sys
+  }))
+  const votes = existingVoteModules.value.map((vm, idx) => ({
+    kind: 'vote',
+    id: vm.id || ('vote-' + idx),
+    name: vm.name || ('表决模块' + (idx + 1)),
+    failureRate: vm.failureRate,
+    missionTime: missionTime.value,
+    ref: vm
+  }))
+  return systems.concat(votes)
+})
+
+// 是否可创建表决模块
+const canCreateVoteModule = computed(() => selectionPool.value.length > 0)
 
 // 从组合式函数获取数据和方法
 const {
@@ -972,25 +1002,36 @@ const toggleSystemSelection = (index) => {
 // 创建基于选定系统的表决模块
 const createVoteModuleFromSelected = () => {
   if (selectedSystemsForVote.value.length === 0) {
-    alert('请至少选择一个系统')
+    alert('请至少选择一个模块')
     return
   }
 
-  // 计算选中系统的串联失效率
-  const selectedSystems = selectedSystemsForVote.value.map(index => ({
-    system: importedSystems.value[index],
-    count: selectedCounts.value[index] || 1
-  }))
-  const totalFailureRate = selectedSystems.reduce((sum, item) => sum + item.system.totalFailureRate * item.count, 0)
+  const selectedItems = selectedSystemsForVote.value.map(idx => {
+    const item = selectionPool.value[idx]
+    return {
+      type: item.kind,
+      ref: item.ref,
+      failureRate: item.failureRate,
+      count: selectedCounts.value[idx] || 1
+    }
+  })
+
+  const totalFailureRate = selectedItems.reduce((sum, it) => sum + it.failureRate * it.count, 0)
   const baseFailureRate = parseFloat(totalFailureRate.toFixed(8))
 
-  const moduleName = `表决模块_${selectedSystems.length}系统串联`
+  const moduleName = `表决模块_${selectedItems.length}模块串联`
 
   voteModule.value = {
     name: moduleName,
     baseFailureRate: baseFailureRate,
     failureRate: 0,
-    selectedSystems: selectedSystems.map(s => ({ id: s.system.id, name: s.system.name, failureRate: s.system.totalFailureRate, count: s.count }))
+    selectedSystems: selectedItems.map(s => ({
+      type: s.type,
+      id: s.ref.id || s.ref.name,
+      name: s.ref.name,
+      failureRate: s.failureRate,
+      count: s.count
+    }))
   }
   // 进入第二步：参数配置
   voteStep.value = 2
@@ -1130,12 +1171,13 @@ const calculateVoteFailureRate = () => {
 
 // 打开表决模块弹窗（初始化）
 const openVoteModal = () => {
-  if (importedSystems.value.length === 0) {
-    alert('请先导入或添加系统')
+  if (selectionPool.value.length === 0) {
+    alert('请先导入或添加系统或已有表决模块')
     return
   }
   voteStep.value = 1
   selectedSystemsForVote.value = []
+  selectedCounts.value = []
   showSystemSelection.value = true
 }
 

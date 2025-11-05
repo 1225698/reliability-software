@@ -1,11 +1,11 @@
 <template>
   <div id="app">
     <aside class="sidebar">
-      <h2>可靠性预计软件</h2>
+  <h2>可靠性分析软件</h2>
       <nav class="sidebar-links">
         <router-link to="/">首页</router-link>
-        <router-link to="/calculator">可靠性计算</router-link>
-        <router-link to="/results">结果分析</router-link>
+  <router-link to="/calculator">可靠性预计</router-link>
+  <router-link to="/allocation">可靠性分配</router-link>
       </nav>
     </aside>
     <main class="main-content">
