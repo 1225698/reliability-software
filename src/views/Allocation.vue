@@ -1,13 +1,18 @@
 <template>
   <div class="allocation-view">
     <h1>可靠性分配</h1>
-    <p style="color:#666;font-size:.9rem;">（此页面暂未填充内容，后续将用于分配策略与目标失效率拆分。）</p>
+    <div id="react-allocation-root" class="react-allocation-mount"></div>
   </div>
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 defineOptions({ name: 'ReliabilityAllocationView' })
-// 预留后续逻辑
+
+onMounted(async () => {
+  const { mountReliabilityAllocation } = await import('@/react-allocation/mountAllocation')
+  mountReliabilityAllocation('#react-allocation-root')
+})
 </script>
 
 <style scoped>
@@ -17,9 +22,6 @@ defineOptions({ name: 'ReliabilityAllocationView' })
   border-radius: 8px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
-.allocation-view h1 {
-  font-size: 1.3rem;
-  margin-bottom: .75rem;
-  color: #334;
-}
+.allocation-view h1 { font-size: 1.3rem; margin-bottom: .75rem; color: #334; }
+.react-allocation-mount { margin-top: .5rem; }
 </style>
