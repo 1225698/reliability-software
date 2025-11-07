@@ -77,9 +77,10 @@ export const UnitLevelAllocation: React.FC = () => {
               <table className='re-table'>
                 <thead>
                   <tr>
-                    <th>单元名称</th>
-                    <th>数量</th>
-                    <th>预计故障率 (1/h)</th>
+                    <th style={{ width: '33%' }}>单元名称</th>
+                    <th style={{ width: '20%' }}>数量</th>
+                    <th style={{ width: 'calc(100% - 33% - 20% - 70px)' }}>预计故障率 (1/h)</th>
+                    <th style={{ width: '70px' }}>操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -87,16 +88,26 @@ export const UnitLevelAllocation: React.FC = () => {
                     <tr key={u.id}>
                       <td><input value={u.name} onChange={e => updateUnit(u.id, { name: e.target.value })} /></td>
                       <td><input type='number' value={u.quantity} min={1} onChange={e => updateUnit(u.id, { quantity: Number(e.target.value) })} /></td>
-                      <td><input type='number' value={u.estFailureRate ?? ''} placeholder='0' onChange={e => updateUnit(u.id, { estFailureRate: e.target.value ? Number(e.target.value) : null })} /></td>
+                      <td><input type='number' value={u.estFailureRate != null ? u.estFailureRate.toFixed(9) : ''} placeholder='0' onChange={e => updateUnit(u.id, { estFailureRate: e.target.value ? Number(e.target.value) : null })} /></td>
+                      <td>
+                        <button
+                          onClick={() => dispatch({ type: 'REMOVE_UNIT', payload: { id: u.id } })}
+                          style={{ padding: '.25rem .5rem', background: '#ff4d4f', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12, width: '100%' }}
+                        >删除</button>
+                      </td>
                     </tr>
                   ))}
-                  <tr>
-                    <td colSpan={3}>
-                      <button onClick={() => updateUnit(`unit-${Date.now()}`, { id: `unit-${Date.now()}`, systemId: selectedSystemId, name: '新单元', quantity: 1, estFailureRate: null } as any)}>+ 添加行</button>
-                    </td>
-                  </tr>
                 </tbody>
               </table>
+              <div style={{ marginTop: '.5rem' }}>
+                <button
+                  onClick={() => {
+                    const id = `unit-${Date.now()}`;
+                    dispatch({ type: 'ADD_UNIT', payload: { id, systemId: selectedSystemId!, name: '新单元', quantity: 1, estFailureRate: null } });
+                  }}
+                  style={{ padding: '.45rem .8rem', background: '#1476ff', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                >+ 添加单元</button>
+              </div>
             </div>
           </section>
 
@@ -108,7 +119,6 @@ export const UnitLevelAllocation: React.FC = () => {
                   <tr>
                     <th>单元名称</th>
                     <th>数量</th>
-                    <th>预计故障率</th>
                     <th>分配系数 k</th>
                     <th>分配 MTBF (h)</th>
                     <th>分配故障率 (1/h)</th>
@@ -119,7 +129,6 @@ export const UnitLevelAllocation: React.FC = () => {
                     <tr key={r.id}>
                       <td>{r.name}</td>
                       <td>{r.quantity}</td>
-                      <td>{r.estFailureRate != null ? format(r.estFailureRate) : '-'}</td>
                       <td>{r.k ? format(r.k,4) : '-'}</td>
                       <td>{r.allocatedMTBF ? format(r.allocatedMTBF,2) : '-'}</td>
                       <td>{r.allocatedFailureRate ? format(r.allocatedFailureRate,8) : '-'}</td>
