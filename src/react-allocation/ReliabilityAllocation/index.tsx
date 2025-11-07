@@ -10,8 +10,8 @@ const TabsInner: React.FC = () => {
   return (
     <div className='allocation-root-react'>
       <div className='tab-bar'>
-        <button className={tab === 'system' ? 'active' : ''} onClick={() => setTab('system')}>基本可靠性（系统级分配）</button>
-        <button className={tab === 'unit' ? 'active' : ''} onClick={() => setTab('unit')}>任务可靠性（单元级分配）</button>
+  <button className={tab === 'system' ? 'active' : ''} onClick={() => setTab('system')}>系统级分配</button>
+  <button className={tab === 'unit' ? 'active' : ''} onClick={() => setTab('unit')}>单元级分配</button>
         <div style={{ flex: 1 }} />
         <button onClick={exportAll} className='export-btn'>导出结果</button>
       </div>
@@ -20,7 +20,8 @@ const TabsInner: React.FC = () => {
         {tab === 'unit' && <UnitLevelAllocation />}
       </div>
       <div style={{ marginTop: '1.2rem' }}>
-        <AllocationCharts />
+        {tab === 'system' && <AllocationCharts mode='system' />}
+        {tab === 'unit' && <AllocationCharts mode='unit' />}
       </div>
       <style>{`
         .allocation-root-react { font-family: system-ui, sans-serif; }

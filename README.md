@@ -5,8 +5,8 @@ This template should help get you started developing with Vue 3 in Vite.
 ## 新增：可靠性分配（React + TypeScript 集成）
 
 已在 `views/Allocation.vue` 中动态挂载 React 子应用，实现双标签页：
-1. 基本可靠性（系统级分配）
-2. 任务可靠性（单元级分配）
+1. 系统级分配
+2. 单元级分配
 
 ### 目录结构
 ```
@@ -40,8 +40,8 @@ src/react-allocation/
 
 ### 使用说明
 1. 打开 `可靠性分配` 页面。
-2. 在“系统级”标签修改任务 MTBF、余量系数、系统数量或导入系统 Excel。
-3. 点击系统结果表某行以激活该系统，然后切换到“单元级”标签进行单元分配或导入单元 Excel。
+2. 在“系统级分配”标签修改任务 MTBF、余量系数、系统数量或导入系统 Excel。
+3. 点击系统结果表某行以激活该系统，然后切换到“单元级分配”标签进行单元分配或导入单元 Excel。
 4. 下方图表实时展示分配占比与层级关系。
 5. 点击“导出结果”生成包含系统与单元分配的 Excel。
 

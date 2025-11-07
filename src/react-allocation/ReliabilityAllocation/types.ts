@@ -28,7 +28,7 @@ export interface UnitAllocationResult extends UnitInputRow {
 export interface AllocationParams {
   taskMTBF: number;   // 任务 MTBF
   margin: number;     // 余量系数 (0-1)，例如 0.9 表示 90%
-  systemCount: number; // 系统数量（用于初始化表格行）
+  // systemCount 移除，不再通过输入控制数量，初始化固定5个，可自由追加
 }
 
 export interface AllocationPersistShape {
@@ -45,8 +45,12 @@ export type AllocationAction =
   | { type: 'SET_PARAMS'; payload: Partial<AllocationParams> }
   | { type: 'SET_SYSTEMS'; payload: SystemInputRow[] }
   | { type: 'UPDATE_SYSTEM'; payload: { id: string; patch: Partial<SystemInputRow> } }
+  | { type: 'ADD_SYSTEM'; payload: SystemInputRow }
+  | { type: 'REMOVE_SYSTEM'; payload: { id: string } }
   | { type: 'SET_UNITS_FOR_SYSTEM'; payload: { systemId: string; rows: UnitInputRow[] } }
   | { type: 'UPDATE_UNIT'; payload: { id: string; patch: Partial<UnitInputRow> } }
+  | { type: 'ADD_UNIT'; payload: UnitInputRow }
+  | { type: 'REMOVE_UNIT'; payload: { id: string } }
   | { type: 'SELECT_SYSTEM'; payload: string | null }
   | { type: 'RESET' };
 

@@ -3,14 +3,14 @@ import { useAllocation } from './state';
 import { DataImport } from './DataImport';
 import { SystemInputRow } from './types';
 
-function format(num: number, digits = 6) {
+function format(num: number, digits = 9) {
   if (!isFinite(num) || num === 0) return '0';
-  if (num > 1e5) return num.toExponential(2);
-  return Number(num.toFixed(digits)).toString();
+  // 统一保留九位小数，不再使用指数写法，确保可读性
+  return num.toFixed(digits);
 }
 
 export const SystemLevelAllocation: React.FC = () => {
-  const { params, dispatch, systems, systemResults, validation, selectedSystemId } = useAllocation();
+  const { params, dispatch, systems, systemResults, selectedSystemId } = useAllocation();
 
   const handleImport = useCallback((rows: Record<string, any>[]) => {
     // Attempt to map columns
@@ -46,10 +46,6 @@ export const SystemLevelAllocation: React.FC = () => {
             }} />
         </div>
         <div>
-          <label>系统数量</label><br />
-          <input type="number" min={1} value={params.systemCount} onChange={e => dispatch({ type: 'SET_PARAMS', payload: { systemCount: Number(e.target.value) } })} />
-        </div>
-        <div>
           <label style={{ display: 'block' }}>导入数据</label>
           <DataImport templateType='system' onData={handleImport} small />
         </div>
@@ -59,39 +55,60 @@ export const SystemLevelAllocation: React.FC = () => {
       </section>
 
       <section>
-        <h3 style={{ margin: '0 0 .5rem' }}>手动输入 / 编辑</h3>
+        <h3 style={{ margin: '0 0 .5rem' }}>系统数据</h3>
         <div style={{ overflowX: 'auto' }}>
           <table className="re-table">
             <thead>
               <tr>
-                <th style={{ width: 140 }}>系统名称</th>
-                <th>预计故障率 (1/h)</th>
+                <th style={{ width: '33%' }}>系统名称</th>
+                <th style={{ width: 'calc(100% - 33% - 70px)' }}>预计故障率 (1/h)</th>
+                <th style={{ width: '70px' }}>操作</th>
               </tr>
             </thead>
             <tbody>
               {systems.map(sys => (
-                <tr key={sys.id} className={selectedSystemId === sys.id ? 'active-row' : ''} onClick={() => dispatch({ type: 'SELECT_SYSTEM', payload: sys.id })}>
-                  <td>
-                    <input value={sys.name} onChange={e => updateSystemField(sys.id, 'name', e.target.value)} />
+                <tr key={sys.id} className={selectedSystemId === sys.id ? 'active-row' : ''}>
+                  <td style={{ whiteSpace: 'nowrap' }} onClick={() => dispatch({ type: 'SELECT_SYSTEM', payload: sys.id })}>
+                    <input
+                      style={{ width: '100%', maxWidth: '100%', padding: '.25rem .4rem' }}
+                      value={sys.name}
+                      onChange={e => updateSystemField(sys.id, 'name', e.target.value)}
+                    />
+                  </td>
+                  <td onClick={() => dispatch({ type: 'SELECT_SYSTEM', payload: sys.id })}>
+                    <input type="number" value={sys.estFailureRate != null ? sys.estFailureRate.toFixed(9) : ''} placeholder="0" onChange={e => updateSystemField(sys.id, 'estFailureRate', e.target.value ? Number(e.target.value) : null)} />
                   </td>
                   <td>
-                    <input type="number" value={sys.estFailureRate ?? ''} placeholder="0" onChange={e => updateSystemField(sys.id, 'estFailureRate', e.target.value ? Number(e.target.value) : null)} />
+                    <button
+                      disabled={systems.length <= 1}
+                      onClick={() => dispatch({ type: 'REMOVE_SYSTEM', payload: { id: sys.id } })}
+                      style={{ padding: '.25rem .5rem', background: systems.length <= 1 ? '#ccc' : '#ff4d4f', color: '#fff', border: 'none', borderRadius: 4, cursor: systems.length <= 1 ? 'not-allowed' : 'pointer', fontSize: 12, width: '100%' }}
+                      title={systems.length <= 1 ? '至少保留一个系统' : '删除此系统'}
+                    >删除</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          <div style={{ marginTop: '.5rem' }}>
+            <button
+              onClick={() => {
+                const id = `sys-${systems.length + 1}-${Date.now()}`;
+                dispatch({ type: 'ADD_SYSTEM', payload: { id, name: `系统${systems.length + 1}`, estFailureRate: null } });
+              }}
+              style={{ padding: '.45rem .8rem', background: '#1476ff', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+            >+ 添加系统</button>
+          </div>
         </div>
       </section>
 
       <section>
-        <h3 style={{ margin: '0 0 .5rem' }}>计算结果</h3>
+        <h3 style={{ margin: '0 0 .5rem' }}>系统分配结果</h3>
         <div style={{ overflowX: 'auto' }}>
           <table className="re-table">
             <thead>
               <tr>
                 <th>系统名称</th>
-                <th>预计故障率</th>
                 <th>分配系数 k</th>
                 <th>分配 MTBF (h)</th>
                 <th>分配故障率 (1/h)</th>
@@ -101,7 +118,6 @@ export const SystemLevelAllocation: React.FC = () => {
               {systemResults.map(r => (
                 <tr key={r.id} className={selectedSystemId === r.id ? 'active-row' : ''} onClick={() => dispatch({ type: 'SELECT_SYSTEM', payload: r.id })}>
                   <td>{r.name}</td>
-                  <td>{r.estFailureRate != null ? format(r.estFailureRate) : '-'}</td>
                   <td>{r.k ? format(r.k, 4) : '-'}</td>
                   <td>{r.allocatedMTBF ? format(r.allocatedMTBF, 2) : '-'}</td>
                   <td>{r.allocatedFailureRate ? format(r.allocatedFailureRate) : '-'}</td>
@@ -112,15 +128,6 @@ export const SystemLevelAllocation: React.FC = () => {
         </div>
       </section>
 
-      <section>
-        <h3 style={{ margin: '0 0 .5rem' }}>校验信息</h3>
-        <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '.85rem', color: '#555' }}>
-          {validation.map((v, i) => (
-            <li key={i} style={{ color: v.level === 'error' ? '#d93026' : v.level === 'warning' ? '#e67e22' : '#555' }}>{v.message}</li>
-          ))}
-          {!validation.length && <li style={{ color: '#2e7d32' }}>无明显问题。</li>}
-        </ul>
-      </section>
 
       <style>{`
         .re-table { border-collapse: collapse; width: 100%; font-size: 13px; }
