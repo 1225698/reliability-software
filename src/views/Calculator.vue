@@ -323,90 +323,8 @@
               <button class="ops-btn orange" @click="openVoteModal" :disabled="!canCreateVoteModule">创建表决模块</button>
               <button class="ops-btn danger" @click="clearImportedSystems" :disabled="importedSystems.length===0">清空系统</button>
               <span class="ops-count">已加载: {{ importedSystems.length }}</span>
-              <button class="ops-btn blue" @click="generateTaskFlowchart">生成流程图</button>
             </div>
-            
-            <!-- 流程图弹窗 -->
-            <div v-if="showFlowchartModal" class="modal-overlay" @click="showFlowchartModal = false">
-              <div class="modal-content" @click.stop>
-                <div class="modal-header">
-                  <h3>任务流程图</h3>
-                  <button class="close-btn" @click="showFlowchartModal = false">×</button>
-                </div>
-                <div class="modal-body">
-                  <div v-if="taskAssemblyModules.length === 0" class="empty-flowchart">
-                    <p>暂无任务模块数据</p>
-                    <p>请先在"任务模块组成"中添加模块</p>
-                  </div>
-                  <div v-else class="flowchart-container">
-                    <div class="flowchart-modules-wrapper">
-                      <template 
-                        v-for="(module, index) in taskAssemblyModules" 
-                        :key="module.id"
-                      >
-                        <div 
-                          class="flowchart-module-wrapper"
-                        >
-                          <div 
-                            class="flowchart-module"
-                            :class="module.sourceType"
-                          >
-                            <div class="module-header">
-                              <span class="module-index">{{ index + 1 }}</span>
-                              <span class="module-name">{{ module.name }}</span>
-                            </div>
-                            <div class="module-details">
-                              <div class="detail-row">
-                                <span class="label">类型:</span>
-                                <span class="value">{{ module.sourceType === 'system' ? '系统' : '表决模块' }}</span>
-                              </div>
-                              <div class="detail-row">
-                                <span class="label">失效率:</span>
-                                <span class="value">{{ module.failureRate.toExponential(6) }}/h</span>
-                              </div>
-                              <div v-if="module.count && module.count > 1" class="detail-row">
-                                <span class="label">数量:</span>
-                                <span class="value">{{ module.count }}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div 
-                            v-if="index < taskAssemblyModules.length - 1" 
-                            class="flowchart-connection"
-                          >
-                            <svg width="100%" height="40">
-                              <defs>
-                                <marker 
-                                  id="arrow" 
-                                  markerWidth="10" 
-                                  markerHeight="10" 
-                                  refX="9" 
-                                  refY="3" 
-                                  orient="auto"
-                                  markerUnits="strokeWidth"
-                                >
-                                  <path d="M0,0 L0,6 L9,3 z" fill="#667eea" />
-                                </marker>
-                              </defs>
-                              <line 
-                                x1="50%" 
-                                y1="0" 
-                                x2="50%" 
-                                y2="40" 
-                                stroke="#667eea" 
-                                stroke-width="2"
-                                marker-end="url(#arrow)"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                      </template>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
+
             <!-- 系统选择模态框（用于创建表决模块）-->
             <div v-if="showSystemSelection" class="modal-overlay" @click="closeVoteModal">
               <div class="modal-content wide" @click.stop>
@@ -623,13 +541,6 @@ import { useRouter } from 'vue-router'
 
 // 状态管理
 const showMain = ref(true)
-const showFlowchartModal = ref(false)
-
-// 🆕 新增：生成流程图方法
-const generateTaskFlowchart = () => {
-  showFlowchartModal.value = true
-  // 可以在这里添加生成流程图的逻辑
-}
 const addSystemTab = ref('import')
 const showAddSystemModal = ref(false)
 // 表决模块多步弹窗步骤：1 选择系统，2 参数配置
@@ -1439,11 +1350,6 @@ onMounted(() => {
   font-size: 1.1rem;
 }
 
-.batch-actions-row {
-  display: flex;
-  gap: 12px;
-}
-
 .saved-system-actions {
   display: flex;
   gap: 8px;
@@ -1594,7 +1500,6 @@ onMounted(() => {
 .ops-btn.purple { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); }
 .ops-btn.green { background:linear-gradient(135deg,#28a745 0%,#20c997 100%); }
 .ops-btn.orange { background:linear-gradient(135deg,#ff9800 0%,#f57c00 100%); }
-.ops-btn.blue { background:linear-gradient(135deg, #2196f3 0%, #21cbf3 100%); }
 .ops-btn.danger { background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%); }
 .ops-btn:disabled { opacity:.35; cursor:not-allowed; }
 .ops-btn:not(:disabled):hover { transform:translateY(-2px); transition:.25s; }
@@ -1652,136 +1557,6 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   background: #f5f7fa;
-}
-
-/* 流程图样式 */
-.empty-flowchart {
-  text-align: center;
-  padding: 40px 20px;
-  color: #666;
-}
-
-.empty-flowchart p {
-  margin: 10px 0;
-}
-
-.flowchart-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 300px;
-  overflow-x: auto;
-  padding: 20px;
-}
-
-.flowchart-modules-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-
-.flowchart-module-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-
-.flowchart-module {
-  background: white;
-  border-radius: 8px;
-  padding: 15px;
-  min-width: 250px;
-  width: fit-content;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  border: 2px solid #e0e0e0;
-  transition: all 0.3s ease;
-  margin: 10px 0;
-}
-
-.flowchart-module:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-}
-
-.flowchart-module.system {
-  border-color: #4CAF50;
-}
-
-.flowchart-module.vote-module {
-  border-color: #2196F3;
-}
-
-.module-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
-}
-
-.module-index {
-  background: #667eea;
-  color: white;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 12px;
-  margin-right: 10px;
-}
-
-.module-name {
-  font-weight: bold;
-  color: #333;
-  flex: 1;
-}
-
-.module-details {
-  font-size: 14px;
-}
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
-}
-
-.detail-row .label {
-  color: #666;
-  font-weight: 500;
-}
-
-.detail-row .value {
-  color: #333;
-  font-weight: 600;
-}
-
-.flowchart-connection {
-  width: 100%;
-  height: 40px;
-  position: relative;
-}
-
-.connection {
-  width: 60%;
-  height: 30px;
-  border-left: 2px solid #667eea;
-  position: relative;
-  margin: 5px 0;
-}
-
-.connection::after {
-  content: "↓";
-  position: absolute;
-  bottom: -15px;
-  left: -10px;
-  color: #667eea;
-  font-size: 20px;
 }
 
 .systems-selection-grid {
