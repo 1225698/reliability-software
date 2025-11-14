@@ -116,7 +116,7 @@
                   <span class="chip-main">{{ comp.type }} × {{ comp.quantity }}</span>
                   <div class="chip-detail">
                     <label style="margin-right:6px">λ(/h):</label>
-                    <input v-model.number="comp.failureRate" type="number" step="any" style="width:120px;" />
+                    <input v-model.number="comp.failureRate" type="number" step="any" class="failure-rate-input" placeholder="0.000001 或 1e-6" />
                   </div>
                   <span class="chip-desc">{{ comp.description }}</span>
                   <button @click="removeComponent(index)" class="remove-btn">删除</button>
@@ -638,7 +638,7 @@ const {
 // 🆕 新增：基本可靠性系统保存方法
 const saveCurrentSystem = () => {
   if (!calculationResults.value.hasResults) {
-    alert('请先完成基本可靠性计算')
+    
     return
   }
 
@@ -657,10 +657,8 @@ const saveCurrentSystem = () => {
   const existingIndex = savedBasicSystems.value.findIndex(sys => sys.name === systemData.name)
   if (existingIndex !== -1) {
     savedBasicSystems.value[existingIndex] = systemData
-    alert(`系统 "${systemData.name}" 已更新`)
   } else {
     savedBasicSystems.value.push(systemData)
-    alert(`系统 "${systemData.name}" 已保存`)
   }
 
   saveSystemsToStorage()
@@ -674,15 +672,12 @@ const loadSystem = (system) => {
   // 重新计算
   calculateReliability()
 
-  alert(`系统 "${system.name}" 已加载`)
+  
 }
 
 const removeSavedSystem = (id) => {
-  if (confirm('确定要删除这个保存的系统吗？')) {
-    savedBasicSystems.value = savedBasicSystems.value.filter(sys => sys.id !== id)
-    saveSystemsToStorage()
-    alert('系统已删除')
-  }
+  savedBasicSystems.value = savedBasicSystems.value.filter(sys => sys.id !== id)
+  saveSystemsToStorage()
 }
 
 const saveSystemsToStorage = () => {
@@ -707,7 +702,6 @@ const loadSystemsFromStorage = () => {
 // 🆕 新增：批量导入方法
 const importAllToTaskReliability = () => {
   if (savedBasicSystems.value.length === 0) {
-    alert('暂无已保存的系统')
     return
   }
 
@@ -721,8 +715,6 @@ const importAllToTaskReliability = () => {
   // 批量加入任务模块列表
   importedSystems.value.forEach(s => addSystemModuleIfMissing(s))
 
-  alert(`成功导入 ${importedSystems.value.length} 个系统到任务可靠性`)
-
   // 自动计算任务可靠性
   setTimeout(() => {
     computeTask()
@@ -734,7 +726,6 @@ const importAllToTaskReliability = () => {
 
 const importFromSavedSystems = () => {
   if (savedBasicSystems.value.length === 0) {
-    alert('暂无已保存的系统')
     return
   }
 
@@ -744,7 +735,7 @@ const importFromSavedSystems = () => {
   )
 
   if (systemsToImport.length === 0) {
-    alert('所有系统都已导入')
+    
     return
   }
 
@@ -759,8 +750,6 @@ const importFromSavedSystems = () => {
     addSystemModuleIfMissing(sys)
   })
 
-  alert(`成功导入 ${systemsToImport.length} 个系统`)
-
   // 自动计算任务可靠性
   setTimeout(() => {
     computeTask()
@@ -770,7 +759,6 @@ const importFromSavedSystems = () => {
 const clearImportedSystems = () => {
   if (confirm('确定要清空所有导入的系统吗？')) {
     importedSystems.value = []
-    alert('已清空所有导入的系统')
 
     // 清空计算结果
     calculationResults.value.taskResults = null
@@ -789,7 +777,7 @@ const isManualSystemValid = computed(() => {
 
 const addManualSystem = () => {
   if (!isManualSystemValid.value) {
-    alert('请填写完整的系统信息')
+    
     return
   }
 
@@ -813,8 +801,6 @@ const addManualSystem = () => {
     missionTime: 1000
   }
 
-  alert(`系统 "${systemData.name}" 已添加`)
-
   // 自动计算任务可靠性
   setTimeout(() => {
     computeTask()
@@ -824,7 +810,6 @@ const addManualSystem = () => {
 // 🆕 新增：任务可靠性结果保存
 const saveTaskReliabilityResults = () => {
   if (!calculationResults.value.taskResults) {
-    alert('请先计算任务可靠性')
     return
   }
 
@@ -855,15 +840,12 @@ const saveTaskReliabilityResults = () => {
 
   savedTaskResults.value.unshift(taskResult)
   saveTaskResultsToStorage()
-
-  alert('任务可靠性结果已保存')
 }
 
 const removeSavedTaskResult = (id) => {
   if (confirm('确定要删除这个保存的任务可靠性结果吗？')) {
     savedTaskResults.value = savedTaskResults.value.filter(result => result.id !== id)
     saveTaskResultsToStorage()
-    alert('任务可靠性结果已删除')
   }
 }
 
@@ -937,7 +919,6 @@ const computeTask = () => {
   }
   // 回退逻辑：没有任务模块则尝试直接用导入系统生成临时模块
   if (importedSystems.value.length === 0) {
-    alert('请先添加任务模块或导入系统数据')
     return
   }
   taskAssemblyModules.value = importedSystems.value.map(sys => ({
@@ -954,7 +935,6 @@ const computeTask = () => {
 // 基于任务模块串联计算
 const computeTaskFromAssembly = (autoGenerated = false) => {
   if (taskAssemblyModules.value.length === 0) {
-    alert('任务模块列表为空')
     return
   }
   const totalObservedFailureRate = taskAssemblyModules.value.reduce((sum, m) => sum + m.failureRate * (m.count || 1), 0)
@@ -968,7 +948,6 @@ const computeTaskFromAssembly = (autoGenerated = false) => {
     systemCount: taskAssemblyModules.value.reduce((c,m)=> c + (m.count || 1), 0)
   }
   calculationResults.value.hasResults = true
-  alert(`任务可靠性计算完成！\n基于 ${taskAssemblyModules.value.reduce((c,m)=> c+(m.count||1),0)} 个任务模块串联\n总失效率: ${totalObservedFailureRate.toExponential(6)}/h${autoGenerated ? '\n(自动从系统生成临时任务模块)' : ''}`)
 }
 
 
@@ -1002,7 +981,6 @@ const toggleSystemSelection = (index) => {
 // 创建基于选定系统的表决模块
 const createVoteModuleFromSelected = () => {
   if (selectedSystemsForVote.value.length === 0) {
-    alert('请至少选择一个模块')
     return
   }
 
@@ -1055,7 +1033,6 @@ const normalizeSelectedCount = (index) => {
 // 保存表决模块
 const saveVotingModule = () => {
   if (!isVoteCalculated.value) {
-    alert('请先计算等效故障率')
     return
   }
 
@@ -1081,8 +1058,6 @@ const saveVotingModule = () => {
   if (taskAssemblyModules.value.length > 0) {
     computeTaskFromAssembly()
   }
-
-  alert(`表决模块 "${voteModule.value.name}" 已保存并加入任务模块列表`)
 
   // 关闭弹窗并重置状态
   closeVoteModal()
@@ -1165,14 +1140,11 @@ const calculateVoteFailureRate = () => {
   voteModule.value.failureRate = parseFloat(λ_vote.toFixed(8))
   taskModules.value[0].failureRate = voteModule.value.failureRate
   isVoteCalculated.value = true
-
-  alert(`表决模块等效故障率计算完成：${voteModule.value.failureRate.toExponential(6)} /h`)
 }
 
 // 打开表决模块弹窗（初始化）
 const openVoteModal = () => {
   if (selectionPool.value.length === 0) {
-    alert('请先导入或添加系统或已有表决模块')
     return
   }
   voteStep.value = 1
@@ -1225,7 +1197,7 @@ const factorial = (n) => {
 const downloadTemplate = () => {
   try {
     if (typeof XLSX === 'undefined') {
-      alert('Excel库未加载，请刷新页面重试')
+      
       return
     }
 
@@ -1240,11 +1212,11 @@ const downloadTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet(templateData)
     XLSX.utils.book_append_sheet(wb, ws, '元器件配置')
     XLSX.writeFile(wb, '可靠性分析_元器件模板.xlsx')
-    alert('Excel模板下载完成！')
+    
 
   } catch (error) {
     console.error('生成模板失败:', error)
-    alert('模板生成失败: ' + error.message)
+    
   }
 }
 
@@ -1295,12 +1267,10 @@ const processExcelFile = async (file) => {
 // 保存并查看结果
 const saveAndView = () => {
   if (selectedComponents.value.length === 0) {
-    alert('请先添加或导入元器件')
     return
   }
 
   if (saveAnalysis()) {
-    alert('分析结果已保存！')
     router.push('/results')
   }
 }
@@ -1753,6 +1723,12 @@ onMounted(() => {
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
 }
+/* 系统参数样式 */
+.param-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
 .param-item {
   display: flex;
   align-items: center;
@@ -1771,13 +1747,47 @@ onMounted(() => {
 }
 .unit {
   margin-left: 8px;
-  color: #666;
+  color: #4a5568;
 }
 
 /* 模板下载样式 */
 .template-generator {
   margin-bottom: 1.5rem;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
 }
+
+.card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e0;
+}
+
+.card-title {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2d3748;
+  background: linear-gradient(to right, #f8f9ff, #ffffff);
+  border-radius: 16px 16px 0 0;
+}
+
+.card-content {
+  padding: 24px;
+}
+
 .download-btn {
   background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
   color: white;
@@ -1879,24 +1889,37 @@ onMounted(() => {
 .component-chip {
   display: flex;
   align-items: center;
-  background: #e3e8ff;
-  border-radius: 8px;
-  padding: 8px 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px 16px;
   gap: 12px;
   font-size: 0.95rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
 }
+
+.component-chip:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e0;
+}
+
 .chip-main {
   font-weight: 600;
   color: #667eea;
   min-width: 100px;
 }
+
 .chip-detail {
-  color: #666;
+  color: #4a5568;
   font-size: 0.9rem;
   min-width: 120px;
+  display: flex;
+  align-items: center;
 }
+
 .chip-desc {
-  color: #888;
+  color: #718096;
   font-size: 0.9rem;
   flex: 1;
 }
@@ -1922,18 +1945,25 @@ onMounted(() => {
 /* 结果展示 */
 .result-row {
   display: flex;
-  gap: 32px;
+  gap: 24px;
   margin-bottom: 18px;
 }
 .result-box {
   flex: 1;
-  border-radius: 12px;
-  padding: 18px 0;
+  border-radius: 16px;
+  padding: 24px 12px;
   text-align: center;
   color: #fff;
   font-weight: bold;
-  box-shadow: 0 2px 12px rgba(102,126,234,0.08);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
+
+.result-box:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
 .result-box.purple {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
@@ -1945,19 +1975,19 @@ onMounted(() => {
   color: #222;
 }
 .result-label {
-  font-size: 1rem;
-  margin-bottom: 10px;
+  font-size: 1.1rem;
+  margin-bottom: 12px;
   font-weight: 500;
 }
 .result-value {
-  font-size: 2rem;
-  font-weight: bold;
+  font-size: 2.2rem;
+  font-weight: 700;
 }
 .action-buttons {
   display: flex;
-  gap: 1rem;
+  gap: 1.5rem;
   justify-content: center;
-  margin-bottom: 2rem;
+  margin: 2rem 0;
 }
 .calculate-btn {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1965,34 +1995,115 @@ onMounted(() => {
   border: none;
   padding: 12px 36px;
   font-size: 1.1rem;
-  border-radius: 25px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: transform 0.3s;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
+
+.calculate-btn:hover, .save-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.calculate-btn:active {
+  transform: translateY(0);
+}
+
 .save-btn {
   background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
   color: white;
   border: none;
   padding: 12px 30px;
   font-size: 1.1rem;
-  border-radius: 25px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: transform 0.3s;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
+
 .save-btn:disabled {
   background: #cccccc;
   cursor: not-allowed;
+  box-shadow: none;
 }
-.calculate-btn:hover, .save-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
+
+.save-btn:disabled:hover {
+  transform: none;
 }
+
 .remove-btn {
   background: #e74c3c;
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.remove-btn:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.remove-btn:active {
+  transform: translateY(0);
+}
+
+.download-btn {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.download-btn:hover {
+  background: linear-gradient(135deg, #218838 0%, #1e9e8a 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.download-btn:active {
+  transform: translateY(0);
+}
+
+.count-btn {
+  background: #667eea;
+  color: #fff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.count-btn:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.count-btn:not(:disabled):hover {
+  background: #5468d4;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.count-btn:active {
+  transform: translateY(0);
 }
 
 /* 标签页样式 */
@@ -2020,17 +2131,109 @@ onMounted(() => {
 
 /* 输入框样式 */
 .param-item input, .task-input {
-  border: 1px solid #d1d5db;
+  border: 2px solid #e2e8f0;
   border-radius: 8px;
-  padding: 8px 14px;
+  padding: 10px 14px;
   font-size: 1rem;
-  background: #f5f7fa;
-  transition: border-color 0.2s;
+  background: #ffffff;
+  transition: all 0.3s ease;
   outline: none;
   flex: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
+
 .param-item input:focus, .task-input:focus {
   border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 1px 6px rgba(0, 0, 0, 0.1);
+}
+
+.param-item input:hover, .task-input:hover {
+  border-color: #cbd5e0;
+}
+
+.failure-rate-input {
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  background: #ffffff;
+  transition: all 0.3s ease;
+  outline: none;
+  width: 140px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.failure-rate-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 1px 6px rgba(0, 0, 0, 0.1);
+}
+
+.failure-rate-input:hover {
+  border-color: #cbd5e0;
+}
+
+.failure-rate-input::placeholder {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.component-chip input {
+  margin-left: 6px;
+}
+
+.count-input {
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  background: #ffffff;
+  transition: all 0.3s ease;
+  outline: none;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  width: 50px;
+}
+
+.count-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 1px 6px rgba(0, 0, 0, 0.1);
+}
+
+.count-input:hover {
+  border-color: #cbd5e0;
+}
+
+.vote-param-input {
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 1rem;
+  background: #ffffff;
+  transition: all 0.3s ease;
+  outline: none;
+  width: 100px !important;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.vote-param-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 1px 6px rgba(0, 0, 0, 0.1);
+}
+
+.vote-param-input:hover {
+  border-color: #cbd5e0;
+}
+
+.vote-param-input.input-error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.1), 0 1px 6px rgba(0, 0, 0, 0.1);
+}
+
+.vote-param-input.input-success {
+  border-color: #28a745;
+  box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1), 0 1px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* 表决模块样式 */
