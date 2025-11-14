@@ -139,7 +139,7 @@
           <div class="card-content result-row">
             <div class="result-box purple">
               <div class="result-label">系统可靠度</div>
-              <div class="result-value">{{ calculationResults.hasResults ? (calculationResults.systemReliability * 100).toFixed(2) : '--' }}%</div>
+              <div class="result-value">{{ calculationResults.hasResults ? calculationResults.systemReliability.toFixed(4) : '--' }}</div>
             </div>
             <div class="result-box pink">
               <div class="result-label">总失效率</div>
@@ -185,7 +185,7 @@
                   </div>
                   <div class="detail-row">
                     <span>系统可靠度:</span>
-                    <strong>{{ (system.systemReliability * 100).toFixed(2) }}%</strong>
+                    <strong>{{ system.systemReliability.toFixed(4) }}</strong>
                   </div>
                   <div class="detail-row">
                     <span>元器件:</span>
@@ -467,7 +467,7 @@
                 </div>
                 <div class="result-box pink" style="flex:0 0 220px;">
                   <div class="result-label">任务基本可靠度 P</div>
-                  <div class="result-value">{{ (calculationResults.taskResults.taskReliability * 100).toFixed(4) }}%</div>
+                  <div class="result-value">{{ calculationResults.taskResults.taskReliability.toFixed(4) }}</div>
                 </div>
               </div>
               <div class="system-summary" style="margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 6px;">
@@ -513,7 +513,7 @@
                   </div>
                   <div class="task-result-row">
                     <span>任务可靠度:</span>
-                    <strong>{{ (result.taskReliability * 100).toFixed(4) }}%</strong>
+                    <strong>{{ result.taskReliability.toFixed(4) }}</strong>
                   </div>
                   <div class="task-result-row">
                     <span>任务 MTBF:</span>
