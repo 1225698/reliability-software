@@ -43,20 +43,17 @@
       <template v-if="item.modelType === 'redundancy'">
         <div class="redundancy-container">
           <svg class="redundancy-svg">
-            <path d="M 0 110 L 30 110 L 80 35" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 30 110 L 80 85" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 30 110 L 80 135" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 30 110 L 80 185" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 180 35 L 230 110" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 180 85 L 230 110" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 180 135 L 230 110" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 180 185 L 230 110" fill="none" stroke="black" stroke-width="2"/>
+            <path d="M 0 110 L 30 110" fill="none" stroke="black" stroke-width="2"/>
+            <template v-for="(cy,i) in getRedundancyLayout(item).branchCenters" :key="i">
+              <path :d="`M 30 110 L 80 ${cy}`" fill="none" stroke="black" stroke-width="2" />
+              <path :d="`M 180 ${cy} L 230 110`" fill="none" stroke="black" stroke-width="2" />
+            </template>
             <circle cx="260" cy="110" r="30" fill="white" stroke="black" stroke-width="2"/>
             <text x="260" y="115" text-anchor="middle" font-size="16">{{ item.k }}/{{ item.n }}</text>
             <line x1="290" y1="110" x2="320" y2="110" stroke="black" stroke-width="2"/>
           </svg>
-          <div class="redundancy-branches">
-            <div v-for="(branch, index) in item.branches" :key="branch.id" class="component-container" :data-item-id="item.id" :data-branch-index="index">
+          <div class="redundancy-branches" :style="{ position: 'absolute', top: 0, left: '80px', width: '100px', height: '100%' }">
+            <div v-for="(branch, index) in item.branches" :key="branch.id" class="component-container" :data-item-id="item.id" :data-branch-index="index" :style="{ position:'absolute', top: getRedundancyLayout(item).branchTops[index] + 'px', height: getRedundancyLayout(item).branchHeight + 'px', width:'100px' }">
               <div v-for="comp in branch.components" :key="comp.id" class="dropped-component">
                 {{ comp.name }}
               </div>
@@ -83,7 +80,7 @@
               class="component-container"
               :data-item-id="item.id"
               :data-branch-index="bIndex"
-              :style="{ position: 'absolute', top: getParallelLayout(item).branchTops[bIndex] + 'px', left: '70px', height: getParallelLayout(item).branchHeight + 'px' }"
+              :style="{ position: 'absolute', top: getParallelLayout(item).branchTops[bIndex] + 'px', left: '70px', width: '100px', height: getParallelLayout(item).branchHeight + 'px' }"
             >
               <div v-for="comp in branch.components" :key="comp.id" class="dropped-component">{{ comp.name }}</div>
             </div>
@@ -514,6 +511,24 @@ function getParallelLayout(item) {
   return { height, centerY, branchTops, branchCenters, branchHeight };
 }
 
+// Redundancy dynamic layout helper (fixed overall size but variable branch centers)
+function getRedundancyLayout(item) {
+  const branchCount = item.branches.length;
+  const branchHeight = 40;
+  // Target symmetric bounds from original static positions (approx): 35 .. 185 around center 110
+  const minY = 35;
+  const maxY = 185;
+  let branchCenters;
+  if (branchCount === 1) {
+    branchCenters = [110];
+  } else {
+    const spacing = (maxY - minY) / (branchCount - 1);
+    branchCenters = Array.from({ length: branchCount }, (_, i) => minY + i * spacing);
+  }
+  const branchTops = branchCenters.map(cy => cy - branchHeight / 2);
+  return { branchCenters, branchTops, branchHeight };
+}
+
 watch(items, () => {
   items.value.forEach(it => updateItemConnectors(it.id));
 }, { deep: true });
@@ -595,13 +610,7 @@ watch(items, () => {
   pointer-events: none;
 }
 .redundancy-branches {
-  position: absolute;
-  top: 10px;
-  left: 80px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100px;
+  /* converted to absolute children; container positioning set inline */
 }
 .redundancy-branches .component-container {
   height: 40px;

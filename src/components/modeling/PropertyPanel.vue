@@ -4,12 +4,8 @@
     <div v-if="!selected">未选择模型</div>
     <div v-else>
       <div class="field">
-        <label>名称</label>
-        <input v-model="selected.name" />
-      </div>
-      <div class="field">
         <label>类型</label>
-        <span>{{ selected.modelType }}</span>
+        <span>{{ typeLabel }}</span>
       </div>
 
       <!-- Parallel model editable branch count -->
@@ -21,11 +17,11 @@
       <!-- Redundancy model editable k/n -->
       <div v-if="selected.modelType === 'redundancy'" class="field row">
         <div>
-          <label>k</label>
+          <label>k值</label>
           <input type="number" min="1" :max="selected.n" v-model.number="selected.k" />
         </div>
         <div>
-          <label>n</label>
+          <label>n值</label>
           <input type="number" min="1" v-model.number="selected.n" @input="onRedundancyNChange" />
         </div>
       </div>
@@ -34,9 +30,19 @@
 </template>
 
 <script setup>
-import { toRefs } from 'vue';
+import { toRefs, computed } from 'vue';
 const props = defineProps({ selected: Object });
 const { selected } = toRefs(props);
+
+const typeLabelMap = {
+  parallel: '并联',
+  redundancy: '冗余',
+  series: '串联'
+};
+const typeLabel = computed(() => {
+  if (!selected.value) return '';
+  return typeLabelMap[selected.value.modelType] || selected.value.modelType;
+});
 
 function onParallelCountChange(val) {
   const count = Math.max(1, parseInt(val, 10) || 1);
