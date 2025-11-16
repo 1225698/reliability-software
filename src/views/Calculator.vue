@@ -31,9 +31,9 @@
           </div>
         </div>
 
-        <!-- 元器件配置卡片 -->
+        <!-- LRU配置卡片 -->
         <div class="card">
-          <div class="card-title">元器件配置</div>
+          <div class="card-title">LRU配置</div>
           <div class="card-content">
             <!-- 模板下载 -->
             <div class="template-generator">
@@ -100,11 +100,11 @@
               </div>
             </div>
 
-            <!-- 元器件列表展示 -->
+            <!-- LRU列表展示 -->
             <div v-if="selectedComponents.length > 0" class="components-display">
-              <h4>当前元器件 ({{ selectedComponents.length }}个)</h4>
+              <h4>当前LRU ({{ selectedComponents.length }}个)</h4>
 
-              <!-- 元器件统计 -->
+              <!-- LRU统计 -->
               <div class="components-summary">
                 <span v-for="(count, type) in componentSummary" :key="type" class="summary-badge">
                   {{ type }}: {{ count }}
@@ -188,7 +188,7 @@
                     <strong>{{ system.systemReliability.toFixed(4) }}</strong>
                   </div>
                   <div class="detail-row">
-                    <span>元器件:</span>
+                    <span>LRU:</span>
                     <strong>{{ system.components.length }} 个</strong>
                   </div>
                 </div>
@@ -896,7 +896,7 @@ const updateSystemModuleCount = (mod, delta) => {
 }
 initModuleErrors()
 
-// 元器件统计
+// LRU统计
 const componentSummary = computed(() => {
   const summary = {}
   selectedComponents.value.forEach(comp => {
@@ -905,8 +905,8 @@ const componentSummary = computed(() => {
   return summary
 })
 
-// 手动添加元器件
-// const addManualComponent = () => { // 保留示例，如需再次启用手动元器件添加可解注释
+// 手动添加LRU
+// const addManualComponent = () => { // 保留示例，如需再次启用手动LRU添加可解注释
 //   addComponent(newComponentType.value)
 // }
 
@@ -1210,8 +1210,8 @@ const downloadTemplate = () => {
 
     const wb = XLSX.utils.book_new()
     const ws = XLSX.utils.aoa_to_sheet(templateData)
-    XLSX.utils.book_append_sheet(wb, ws, '元器件配置')
-    XLSX.writeFile(wb, '可靠性分析_元器件模板.xlsx')
+    XLSX.utils.book_append_sheet(wb, ws, 'LRU配置')
+    XLSX.writeFile(wb, '可靠性分析_LRU模板.xlsx')
     
 
   } catch (error) {
@@ -1252,7 +1252,7 @@ const processExcelFile = async (file) => {
     const result = await importComponentsFromExcel(file)
 
     if (result.success) {
-      uploadStatus.value = { type: 'success', message: `成功导入 ${result.count} 个元器件` }
+      uploadStatus.value = { type: 'success', message: `成功导入 ${result.count} 个LRU` }
     } else {
       uploadStatus.value = { type: 'error', message: result.message }
     }
@@ -1864,7 +1864,7 @@ onMounted(() => {
   color: white;
 }
 
-/* 元器件列表 */
+/* LRU列表 */
 .components-display {
   margin-top: 2rem;
 }
