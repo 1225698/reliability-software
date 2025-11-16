@@ -2,40 +2,23 @@ import { ref } from 'vue'
 import * as XLSX from 'xlsx'
 
 export function useReliabilityCalc() {
-  // 系统参数
-  const systemName = ref('电源控制系统')
-  const missionTime = ref(1000)
-  const workingTemperature = ref(25)
+  // 系统参数 - 修改为初始空值
+  const systemName = ref('') // 改为空字符串
+  const missionTime = ref('') // 改为空值，让用户必须输入
+  const workingTemperature = ref('') // 改为空值
 
-  // 环境相关参数 - 支持输入环境名称和因子值
-  // 环境相关参数已移除（不再影响计算）
-
-  // 元器件类型选项
+  // LRU类型选项
   const componentTypeOptions = [
     '电阻', '电容', '集成电路', '晶体管', '连接器',
     '电感', '二极管', '变压器', '继电器', '传感器'
   ]
 
-  // 用户选择的元器件
-  const selectedComponents = ref([
-    {
-      type: '电阻',
-      quantity: 10,
-      failureRate: 0.000001,
-      description: '10kΩ 碳膜电阻'
-    },
-    {
-      type: '集成电路',
-      quantity: 2,
-      failureRate: 0.00001,
-      description: '运算放大器'
-    }
-  ])  
-  // 任务级别的模块（每个模块代表若干系统/表决模型的观测故障率）
-  const taskModules = ref([
-    { name: '模块A', failureRate: 0.0005 },
-    { name: '模块B', failureRate: 0.0002 }
-  ])
+  // 用户选择的LRU - 改为空数组
+  const selectedComponents = ref([]) // 移除默认LRU
+  
+  // 任务级别的模块 - 改为空数组
+  const taskModules = ref([]) // 移除默认模块
+
   // 计算结果
   const calculationResults = ref({
     totalFailureRate: 0,
@@ -80,10 +63,10 @@ export function useReliabilityCalc() {
 
           // 解析数据
           const components = parseExcelJsonData(jsonData)
-          console.log('解析出的元器件数量:', components.length)
+          console.log('解析出的LRU数量:', components.length)
 
           if (components.length === 0) {
-            throw new Error('未找到有效的元器件数据，请检查Excel格式')
+            throw new Error('未找到有效的LRU数据，请检查Excel格式')
           }
 
           resolve(components)
@@ -135,10 +118,10 @@ export function useReliabilityCalc() {
     console.log('表头内容:', headers)
 
     // 确定列索引（更宽松的匹配）
-    const typeIndex = findColumnIndex(headers, ['类型', '元器件类型', 'type', 'component'])
-    const quantityIndex = findColumnIndex(headers, ['数量', '元器件数量', 'quantity', 'count', '个数'])
+    const typeIndex = findColumnIndex(headers, ['类型', 'LRU类型', 'type', 'component'])
+    const quantityIndex = findColumnIndex(headers, ['数量', 'LRU数量', 'quantity', 'count', '个数'])
     const failureRateIndex = findColumnIndex(headers, ['失效率', '失效率值', 'failure', 'rate', 'λ'])
-    const descriptionIndex = findColumnIndex(headers, ['描述', '元器件描述', 'description', 'desc', '说明'])
+    const descriptionIndex = findColumnIndex(headers, ['描述', 'LRU描述', 'description', 'desc', '说明'])
 
     console.log('列索引:', { typeIndex, quantityIndex, failureRateIndex, descriptionIndex })
 
@@ -240,22 +223,22 @@ export function useReliabilityCalc() {
     return isNaN(num) ? NaN : num
   }
 
-  // 批量导入Excel元器件
+  // 批量导入ExcelLRU
   const importComponentsFromExcel = async (file) => {
     try {
       console.log('开始导入Excel文件...')
 
       const newComponents = await parseExcelData(file)
 
-      console.log('导入的元器件数据:', newComponents)
+      console.log('导入的LRU数据:', newComponents)
 
-      // 清空现有元器件，替换为导入的数据
+      // 清空现有LRU，替换为导入的数据
       selectedComponents.value = newComponents
 
       return {
         success: true,
         count: newComponents.length,
-        message: `成功导入 ${newComponents.length} 个元器件`,
+        message: `成功导入 ${newComponents.length} 个LRU`,
         components: newComponents
       }
     } catch (error) {
@@ -268,7 +251,7 @@ export function useReliabilityCalc() {
     }
   }
 
-  // 手动添加单个元器件（保留原有功能）
+  // 手动添加单个LRU（保留原有功能）
   const addComponent = (type = '电阻') => {
     const defaultFailureRates = {
       '电阻': 0.000001,
@@ -291,7 +274,7 @@ export function useReliabilityCalc() {
     })
   }
 
-  // 删除元器件
+  // 删除LRU
   const removeComponent = (index) => {
     selectedComponents.value.splice(index, 1)
   }
@@ -318,9 +301,15 @@ export function useReliabilityCalc() {
 
   // 执行可靠性计算
   const calculateReliability = () => {
-    // 验证是否有元器件
+    // 验证是否有LRU
     if (selectedComponents.value.length === 0) {
-      alert('请先添加或导入元器件')
+      alert('请先添加或导入LRU')
+      return false
+    }
+
+    // 验证任务时间是否已输入
+    if (!missionTime.value || missionTime.value <= 0) {
+      alert('请输入有效的任务时间')
       return false
     }
 
@@ -339,10 +328,17 @@ export function useReliabilityCalc() {
 
     return calculationResults.value
   }
+
   // 计算任务级可靠性：观测任务故障率 = 各模块 failureRate 之和
   const calculateTaskReliability = () => {
     if (!Array.isArray(taskModules.value) || taskModules.value.length === 0) {
       alert('请先添加任务下的模块并输入故障率')
+      return false
+    }
+
+    // 验证任务时间是否已输入
+    if (!missionTime.value || missionTime.value <= 0) {
+      alert('请输入有效的任务时间')
       return false
     }
 
@@ -371,6 +367,7 @@ export function useReliabilityCalc() {
 
     return calculationResults.value.taskResults
   }
+
   // 保存分析结果
   const saveAnalysis = () => {
     if (!calculationResults.value.hasResults) {
@@ -380,7 +377,7 @@ export function useReliabilityCalc() {
 
     const analysis = {
       id: Date.now(),
-      systemName: systemName.value,
+      systemName: systemName.value || '未命名系统',
       missionTime: missionTime.value,
       components: JSON.parse(JSON.stringify(selectedComponents.value)),
       totalFailureRate: calculationResults.value.totalFailureRate,
