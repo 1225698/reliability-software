@@ -17,6 +17,19 @@
       />
     </svg>
 
+    <!-- Group Overlay (虚线框) -->
+    <div
+      v-if="hoveredGroup"
+      class="group-overlay"
+      :style="{
+        left: hoveredGroup.bbox.left + 'px',
+        top: hoveredGroup.bbox.top + 'px',
+        width: hoveredGroup.bbox.width + 'px',
+        height: hoveredGroup.bbox.height + 'px'
+      }"
+      @mousedown.stop="onGroupMouseDown($event)"
+    ></div>
+
     <!-- Canvas Items -->
     <div
       v-for="item in items"
@@ -24,6 +37,7 @@
       :style="item.style"
       :class="['canvas-item', item.modelType, { 'is-dragging': item.id === draggedItemId }]"
       @mousedown.stop="onItemMouseDown(item, $event)"
+      @click.stop="onItemClick(item)"
     >
       <!-- Redundancy Model -->
       <template v-if="item.modelType === 'redundancy'">
@@ -51,27 +65,27 @@
         </div>
       </template>
 
-      <!-- Parallel Model -->
+      <!-- Parallel Model (dynamic) -->
       <template v-else-if="item.modelType === 'parallel'">
-        <div class="parallel-container">
-          <svg class="parallel-svg">
-            <path d="M 0 75 L 50 75" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 190 75 L 240 75" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 50 75 L 50 35 L 70 35" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 170 35 L 190 35 L 190 75" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 50 75 L 50 115 L 70 115" fill="none" stroke="black" stroke-width="2"/>
-            <path d="M 170 115 L 190 115 L 190 75" fill="none" stroke="black" stroke-width="2"/>
+        <div class="parallel-container" :style="{ height: getParallelLayout(item).height + 'px' }">
+          <svg class="parallel-svg" :style="{ height: getParallelLayout(item).height + 'px' }">
+            <path :d="`M 0 ${getParallelLayout(item).centerY} L 50 ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
+            <path :d="`M 190 ${getParallelLayout(item).centerY} L 240 ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
+            <template v-for="(cy, i) in getParallelLayout(item).branchCenters" :key="i">
+              <path :d="`M 50 ${getParallelLayout(item).centerY} L 50 ${cy} L 70 ${cy}`" fill="none" stroke="black" stroke-width="2"/>
+              <path :d="`M 170 ${cy} L 190 ${cy} L 190 ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
+            </template>
           </svg>
-          <div class="parallel-branches">
-            <div class="component-container" :data-item-id="item.id" data-branch-index="0">
-              <div v-for="comp in item.branches[0].components" :key="comp.id" class="dropped-component">
-                {{ comp.name }}
-              </div>
-            </div>
-            <div class="component-container" :data-item-id="item.id" data-branch-index="1">
-              <div v-for="comp in item.branches[1].components" :key="comp.id" class="dropped-component">
-                {{ comp.name }}
-              </div>
+          <div class="parallel-branches" :style="{ height: getParallelLayout(item).height + 'px' }">
+            <div
+              v-for="(branch, bIndex) in item.branches"
+              :key="bIndex"
+              class="component-container"
+              :data-item-id="item.id"
+              :data-branch-index="bIndex"
+              :style="{ position: 'absolute', top: getParallelLayout(item).branchTops[bIndex] + 'px', left: '70px', height: getParallelLayout(item).branchHeight + 'px' }"
+            >
+              <div v-for="comp in branch.components" :key="comp.id" class="dropped-component">{{ comp.name }}</div>
             </div>
           </div>
         </div>
@@ -91,7 +105,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, watch } from 'vue';
 
 const items = ref([]);
 const connections = ref([]);
@@ -99,8 +113,10 @@ let idCounter = 0;
 
 const draggedItemId = ref(null);
 const dragOffset = ref({ x: 0, y: 0 });
-const potentialConnection = ref(null);
+const potentialSnap = ref(null); // { draggedItem, draggedConnectorType, staticItem, staticConnectorType }
 const SNAP_THRESHOLD = 20;
+const hoveredGroup = ref(null); // { ids:[], bbox }
+const groupDrag = ref({ active: false, offset: {x:0,y:0}, startMouse: {x:0,y:0}, startPositions: {} });
 
 // --- Drag and Drop for NEW items from Palette ---
 const onCanvasDrop = (event) => {
@@ -118,13 +134,14 @@ const onCanvasDrop = (event) => {
       id: `item-${idCounter++}`,
       type: 'model',
       modelType: data.modelType,
+      name: data.modelType,
       style: {
         position: 'absolute',
         left: `${x}px`,
         top: `${y}px`,
         zIndex: 1,
       },
-      connectors: { in: {x:0, y:0}, out: {x:0, y:0} }
+      connectors: { in: {x:0, y:0, snapped: false}, out: {x:0, y:0, snapped: false} },
     };
 
     if (data.modelType === 'parallel') {
@@ -154,14 +171,27 @@ const onCanvasDrop = (event) => {
   }
 };
 
+// selection emit
+const emit = defineEmits(['select']);
+const onItemClick = (item) => emit('select', item);
 // Expose to parent if needed, or handle drop here
 defineExpose({ onCanvasDrop });
 
 
 // --- Custom Dragging for EXISTING items on Canvas ---
 const onItemMouseDown = (item, event) => {
-  // Remove any existing connections to this item
-  connections.value = connections.value.filter(c => c.from !== item.id && c.to !== item.id);
+  // Disconnect the item being dragged
+  const connectionsToRemove = [];
+  connections.value = connections.value.filter(conn => {
+    if (conn.from.id === item.id || conn.to.id === item.id) {
+      const fromItem = items.value.find(i => i.id === conn.from.id);
+      const toItem = items.value.find(i => i.id === conn.to.id);
+      if (fromItem) fromItem.connectors[conn.from.type].snapped = false;
+      if (toItem) toItem.connectors[conn.to.type].snapped = false;
+      return false;
+    }
+    return true;
+  });
 
   draggedItemId.value = item.id;
   const rect = event.currentTarget.getBoundingClientRect();
@@ -169,11 +199,33 @@ const onItemMouseDown = (item, event) => {
     x: event.clientX - rect.left,
     y: event.clientY - rect.top,
   };
-  item.style.zIndex = 10; // Bring to front
+  items.value.forEach(i => i.style.zIndex = (i.id === item.id ? 10 : 1));
 };
 
 const onCanvasMouseMove = (event) => {
-  if (!draggedItemId.value) return;
+  // Group dragging
+  if (groupDrag.value.active) {
+    const dx = event.clientX - groupDrag.value.startMouse.x;
+    const dy = event.clientY - groupDrag.value.startMouse.y;
+    hoveredGroup.value.ids.forEach(id => {
+      const startPos = groupDrag.value.startPositions[id];
+      const item = items.value.find(i => i.id === id);
+      if (item) {
+        item.style.left = (startPos.left + dx) + 'px';
+        item.style.top = (startPos.top + dy) + 'px';
+        updateItemConnectors(item.id);
+      }
+    });
+    // 更新虚线框位置
+    updateHoveredGroupBBox();
+    return;
+  }
+
+  if (!draggedItemId.value) {
+    // 检测鼠标靠近某连接组
+    detectHoveredGroup(event);
+    return;
+  }
 
   const draggedItem = items.value.find(i => i.id === draggedItemId.value);
   if (!draggedItem) return;
@@ -183,62 +235,237 @@ const onCanvasMouseMove = (event) => {
   let newY = event.clientY - canvasRect.top - dragOffset.value.y;
 
   // Snapping Logic
-  potentialConnection.value = null;
-  const draggedConnector = getItemConnectors(draggedItem).out;
+  potentialSnap.value = null;
+  const draggedItemConnectors = getItemConnectors(draggedItem, newX, newY);
 
   for (const staticItem of items.value) {
     if (staticItem.id === draggedItemId.value) continue;
 
-    const staticConnector = getItemConnectors(staticItem).in;
-    const dist = Math.hypot(draggedConnector.x - staticConnector.x, draggedConnector.y - staticConnector.y);
+    const staticItemConnectors = getItemConnectors(staticItem);
 
-    if (dist < SNAP_THRESHOLD) {
-      newX -= (draggedConnector.x - staticConnector.x);
-      newY -= (draggedConnector.y - staticConnector.y);
-      potentialConnection.value = { from: draggedItem.id, to: staticItem.id };
-      break; // Snap to the first one found
+    for (const draggedConnectorType of ['in', 'out']) {
+      if (draggedItem.connectors[draggedConnectorType].snapped) continue;
+
+      for (const staticConnectorType of ['in', 'out']) {
+        if (staticItem.connectors[staticConnectorType].snapped) continue;
+
+        const draggedConnector = draggedItemConnectors[draggedConnectorType];
+        const staticConnector = staticItemConnectors[staticConnectorType];
+        const dist = Math.hypot(draggedConnector.x - staticConnector.x, draggedConnector.y - staticConnector.y);
+
+        if (dist < SNAP_THRESHOLD) {
+          const draggedDim = getItemDimensions(draggedItem);
+          const staticDim = getItemDimensions(staticItem);
+
+          const draggedConnectorPos = {
+            x: draggedConnectorType === 'in' ? 0 : draggedDim.width,
+            y: draggedDim[`${draggedConnectorType}Y`]
+          };
+
+          newX = staticConnector.x - draggedConnectorPos.x;
+          newY = staticConnector.y - draggedConnectorPos.y;
+
+          potentialSnap.value = {
+            from: { id: draggedItem.id, type: draggedConnectorType },
+            to: { id: staticItem.id, type: staticConnectorType }
+          };
+
+          // Break all loops
+          goto_snapFound.call(this);
+        }
+      }
     }
   }
+  function goto_snapFound() {}
+
 
   draggedItem.style.left = `${newX}px`;
   draggedItem.style.top = `${newY}px`;
   updateItemConnectors(draggedItem.id);
+
+  // Move snapped items
+  moveSnappedItems(draggedItem, newX, newY);
 };
 
+function moveSnappedItems(draggedItem, newX, newY) {
+    const draggedConnectors = getItemConnectors(draggedItem, newX, newY);
+
+    connections.value.forEach(conn => {
+        let staticItem, draggedConnector, staticConnectorType, staticConnector;
+        if (conn.from.id === draggedItem.id) {
+            staticItem = items.value.find(i => i.id === conn.to.id);
+            draggedConnector = draggedConnectors[conn.from.type];
+            staticConnectorType = conn.to.type;
+        } else if (conn.to.id === draggedItem.id) {
+            staticItem = items.value.find(i => i.id === conn.from.id);
+            draggedConnector = draggedConnectors[conn.to.type];
+            staticConnectorType = conn.from.type;
+        } else {
+            return;
+        }
+
+        if (staticItem) {
+            const staticDim = getItemDimensions(staticItem);
+            const staticConnectorPos = {
+                x: staticConnectorType === 'in' ? 0 : staticDim.width,
+                y: staticDim[`${staticConnectorType}Y`]
+            };
+
+            const newStaticX = draggedConnector.x - staticConnectorPos.x;
+            const newStaticY = draggedConnector.y - staticConnectorPos.y;
+
+            staticItem.style.left = `${newStaticX}px`;
+            staticItem.style.top = `${newStaticY}px`;
+            updateItemConnectors(staticItem.id);
+
+            // Recursively move items snapped to this one
+            moveSnappedItems(staticItem, newStaticX, newStaticY);
+        }
+    });
+}
+
+
 const onCanvasMouseUp = () => {
+  if (groupDrag.value.active) {
+    groupDrag.value.active = false;
+    return;
+  }
   if (!draggedItemId.value) return;
+
+  if (potentialSnap.value) {
+    const { from, to } = potentialSnap.value;
+    const fromItem = items.value.find(i => i.id === from.id);
+    const toItem = items.value.find(i => i.id === to.id);
+
+    if (fromItem && toItem && !fromItem.connectors[from.type].snapped && !toItem.connectors[to.type].snapped) {
+      connections.value.push({ from, to });
+      fromItem.connectors[from.type].snapped = true;
+      toItem.connectors[to.type].snapped = true;
+    }
+  }
 
   const draggedItem = items.value.find(i => i.id === draggedItemId.value);
   if (draggedItem) {
     draggedItem.style.zIndex = 1;
   }
 
-  if (potentialConnection.value) {
-    // Avoid duplicate connections
-    if (!connections.value.some(c => c.from === potentialConnection.value.from && c.to === potentialConnection.value.to)) {
-      connections.value.push(potentialConnection.value);
+  draggedItemId.value = null;
+  potentialSnap.value = null;
+};
+
+// 连接组相关逻辑
+function buildGroups() {
+  const visited = new Set();
+  const groups = [];
+  // 构建邻接表（按模型 id）
+  const adj = new Map();
+  connections.value.forEach(c => {
+    const a = c.from.id;
+    const b = c.to.id;
+    if (!adj.has(a)) adj.set(a, new Set());
+    if (!adj.has(b)) adj.set(b, new Set());
+    adj.get(a).add(b);
+    adj.get(b).add(a);
+  });
+  items.value.forEach(item => {
+    const id = item.id;
+    if (visited.has(id)) return;
+    const groupIds = [];
+    const stack = [id];
+    while (stack.length) {
+      const cur = stack.pop();
+      if (visited.has(cur)) continue;
+      visited.add(cur);
+      groupIds.push(cur);
+      const neighbors = adj.get(cur);
+      if (neighbors) neighbors.forEach(n => { if (!visited.has(n)) stack.push(n); });
+    }
+    if (groupIds.length > 1) {
+      // 计算边界
+      let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+      groupIds.forEach(gid => {
+        const it = items.value.find(i => i.id === gid);
+        if (!it) return;
+        const dims = getItemDimensions(it);
+        const x = parseFloat(it.style.left);
+        const y = parseFloat(it.style.top);
+        left = Math.min(left, x);
+        top = Math.min(top, y);
+        right = Math.max(right, x + dims.width);
+        bottom = Math.max(bottom, y + dims.height);
+      });
+      groups.push({ ids: groupIds, bbox: { left, top, width: right - left, height: bottom - top } });
+    }
+  });
+  return groups;
+}
+
+function detectHoveredGroup(event) {
+  const groups = buildGroups();
+  const canvasRect = event.currentTarget.getBoundingClientRect();
+  const mx = event.clientX - canvasRect.left;
+  const my = event.clientY - canvasRect.top;
+  const margin = 15; // 靠近阈值
+  let found = null;
+  for (const g of groups) {
+    const { left, top, width, height } = g.bbox;
+    if (mx >= left - margin && mx <= left + width + margin && my >= top - margin && my <= top + height + margin) {
+      found = g;
+      break;
     }
   }
+  hoveredGroup.value = found;
+}
 
-  draggedItemId.value = null;
-  potentialConnection.value = null;
-};
+function updateHoveredGroupBBox() {
+  if (!hoveredGroup.value) return;
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+  hoveredGroup.value.ids.forEach(id => {
+    const it = items.value.find(i => i.id === id);
+    if (!it) return;
+    const dims = getItemDimensions(it);
+    const x = parseFloat(it.style.left);
+    const y = parseFloat(it.style.top);
+    left = Math.min(left, x);
+    top = Math.min(top, y);
+    right = Math.max(right, x + dims.width);
+    bottom = Math.max(bottom, y + dims.height);
+  });
+  hoveredGroup.value.bbox = { left, top, width: right - left, height: bottom - top };
+}
+
+function onGroupMouseDown(event) {
+  if (!hoveredGroup.value) return;
+  groupDrag.value.active = true;
+  groupDrag.value.startMouse = { x: event.clientX, y: event.clientY };
+  groupDrag.value.startPositions = {};
+  hoveredGroup.value.ids.forEach(id => {
+    const it = items.value.find(i => i.id === id);
+    if (it) {
+      groupDrag.value.startPositions[id] = { left: parseFloat(it.style.left), top: parseFloat(it.style.top) };
+    }
+  });
+}
 
 
 // --- Connector and Connection Line Logic ---
-const getItemConnectors = (item) => {
-  const left = parseFloat(item.style.left);
-  const top = parseFloat(item.style.top);
+const getItemDimensions = (item) => {
   let width, height, inY, outY;
-
-  // These dimensions should match the CSS
   if (item.modelType === 'parallel') {
-    width = 240; height = 150; inY = 75; outY = 75;
+    const layout = getParallelLayout(item);
+    width = 240; height = layout.height; inY = layout.centerY; outY = layout.centerY;
   } else if (item.modelType === 'redundancy') {
     width = 320; height = 220; inY = 110; outY = 110;
   } else { // Series
     width = 124; height = 74; inY = height / 2; outY = height / 2;
   }
+  return { width, height, inY, outY };
+};
+
+const getItemConnectors = (item, customLeft, customTop) => {
+  const left = customLeft !== undefined ? customLeft : parseFloat(item.style.left);
+  const top = customTop !== undefined ? customTop : parseFloat(item.style.top);
+  const { width, inY, outY } = getItemDimensions(item);
 
   return {
     in: { x: left, y: top + inY },
@@ -249,21 +476,47 @@ const getItemConnectors = (item) => {
 const updateItemConnectors = (itemId) => {
   const item = items.value.find(i => i.id === itemId);
   if (item) {
-    item.connectors = getItemConnectors(item);
+    const connectors = getItemConnectors(item);
+    item.connectors.in.x = connectors.in.x;
+    item.connectors.in.y = connectors.in.y;
+    item.connectors.out.x = connectors.out.x;
+    item.connectors.out.y = connectors.out.y;
   }
 };
 
 const connectionPaths = computed(() => {
   return connections.value.map(conn => {
-    const fromItem = items.value.find(i => i.id === conn.from);
-    const toItem = items.value.find(i => i.id === conn.to);
+    const fromItem = items.value.find(i => i.id === conn.from.id);
+    const toItem = items.value.find(i => i.id === conn.to.id);
     if (!fromItem || !toItem) return '';
 
-    const p1 = fromItem.connectors.out;
-    const p2 = toItem.connectors.in;
+    const p1 = fromItem.connectors[conn.from.type];
+    const p2 = toItem.connectors[conn.to.type];
+
+    // Do not draw line if snapped (endpoints overlap)
+    const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    if (dist < 1) return '';
+
     return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
   });
 });
+
+// Parallel dynamic layout helper
+function getParallelLayout(item) {
+  const branchCount = item.branches.length;
+  const branchHeight = 50;
+  const spacing = 10;
+  const margin = 10;
+  const height = margin + branchCount * branchHeight + (branchCount - 1) * spacing + margin;
+  const centerY = height / 2;
+  const branchTops = Array.from({ length: branchCount }, (_, i) => margin + i * (branchHeight + spacing));
+  const branchCenters = branchTops.map(t => t + branchHeight / 2);
+  return { height, centerY, branchTops, branchCenters, branchHeight };
+}
+
+watch(items, () => {
+  items.value.forEach(it => updateItemConnectors(it.id));
+}, { deep: true });
 
 </script>
 
@@ -285,6 +538,15 @@ const connectionPaths = computed(() => {
   width: 100%;
   height: 100%;
   pointer-events: none; /* Allows clicking through the SVG */
+}
+
+.group-overlay {
+  position: absolute;
+  border: 2px dashed #888;
+  pointer-events: auto;
+  background: rgba(0,0,0,0.02);
+  box-sizing: border-box;
+  cursor: move;
 }
 
 .canvas-item {
@@ -347,13 +609,12 @@ const connectionPaths = computed(() => {
 
 /* Parallel Model Styles */
 .parallel {
-  width: 240px;
-  height: 150px;
+  width: 240px; /* height dynamic */
 }
 .parallel-container {
   position: relative;
   width: 100%;
-  height: 100%;
+  /* height set inline */
 }
 .parallel-svg {
   position: absolute;
@@ -366,15 +627,8 @@ const connectionPaths = computed(() => {
 }
 .parallel-branches {
   position: absolute;
-  top: 10px;
-  left: 70px;
-  width: 100px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  height: 130px;
-}
-.parallel-branches .component-container {
-  height: 50px;
+  top: 0;
+  left: 0;
+  width: 100%;
 }
 </style>
