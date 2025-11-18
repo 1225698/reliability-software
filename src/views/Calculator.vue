@@ -10,198 +10,147 @@
 
     <!-- 基本可靠性标签页 -->
     <template v-if="showMain">
-      <div class="card-section">
-        <!-- 系统参数卡片 -->
-        <div class="card">
-          <div class="card-title">系统参数</div>
-          <div class="card-content">
-            <div class="param-grid">
-              <div class="param-item">
+      <div class="card-section compact-section">
+        <!-- 系统参数和LRU配置合并卡片 -->
+        <div class="card compact-card">
+          <div class="card-title">基本可靠性分析</div>
+          <div class="card-content compact-content">
+            <div class="compact-grid">
+              <!-- 系统参数 -->
+              <div class="compact-param-item">
                 <label>系统名称：</label>
-                <input v-model="systemName" placeholder="请输入系统名称" />
+                <input v-model="systemName" placeholder="系统名称" class="compact-input" />
               </div>
-              <div class="param-item">
+              <div class="compact-param-item">
                 <label>任务时间：</label>
-                <div class="input-with-unit">
-                  <input v-model.number="missionTime" type="number" min="0" />
+                <div class="input-with-unit compact-input-unit">
+                  <input v-model.number="missionTime" type="number" min="0" class="compact-input" />
                   <span class="unit">小时</span>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
+              
+              <!-- LRU配置 -->
+              <div class="compact-lru-section">
+                <div class="template-generator compact-template">
+                  <button @click="downloadTemplate" class="download-btn compact-btn">
+                    📥 Excel模板
+                  </button>
+                  <p class="template-tip compact-tip">使用模板填写数据确保正确导入</p>
+                </div>
 
-        <!-- LRU配置卡片 -->
-        <div class="card">
-          <div class="card-title">LRU配置</div>
-          <div class="card-content">
-            <!-- 模板下载 -->
-            <div class="template-generator">
-              <button @click="downloadTemplate" class="download-btn">
-                📥 下载Excel模板
-              </button>
-              <p class="template-tip">使用此模板填写数据可确保正确导入</p>
-            </div>
-
-            <!-- Excel导入区域 -->
-            <div class="excel-import-section">
-              <div v-if="uploadStatus" class="upload-status" :class="uploadStatus.type">
-                {{ uploadStatus.message }}
-              </div>
-
-              <div
-                class="upload-area"
-                @click="triggerFileInput"
-                @drop="handleDrop"
-                @dragover="handleDragOver"
-                @dragleave="handleDragLeave"
-              >
-                <input
-                  ref="fileInput"
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  @change="handleFileUpload"
-                  style="display: none"
+                <div
+                  class="upload-area compact-upload"
+                  @click="triggerFileInput"
+                  @drop="handleDrop"
+                  @dragover="handleDragOver"
+                  @dragleave="handleDragLeave"
                 >
-                <div class="upload-content">
-                  <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4c2.svg" alt="Excel" style="width: 48px; margin-bottom: 12px;">
-                  <p>点击或拖拽Excel文件到此区域</p>
-                  <small>支持 .xlsx, .xls, .csv 格式</small>
-                </div>
-              </div>
-
-              <!-- Excel模板说明 -->
-              <div class="template-info">
-                <h4>Excel模板格式：</h4>
-                <table class="template-table">
-                  <thead>
-                    <tr>
-                      <th>类型</th>
-                      <th>数量</th>
-                      <th>失效率</th>
-                      <th>描述</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>电阻</td>
-                      <td>10</td>
-                      <td>0.000001</td>
-                      <td>10kΩ碳膜电阻</td>
-                    </tr>
-                    <tr>
-                      <td>集成电路</td>
-                      <td>2</td>
-                      <td>0.00001</td>
-                      <td>运算放大器</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- LRU列表展示 -->
-            <div v-if="selectedComponents.length > 0" class="components-display">
-              <h4>当前LRU ({{ selectedComponents.length }}个)</h4>
-
-              <!-- LRU统计 -->
-              <div class="components-summary">
-                <span v-for="(count, type) in componentSummary" :key="type" class="summary-badge">
-                  {{ type }}: {{ count }}
-                </span>
-              </div>
-
-              <div class="components-list">
-                <div v-for="(comp, index) in selectedComponents" :key="index" class="component-chip">
-                  <span class="chip-main">{{ comp.type }} × {{ comp.quantity }}</span>
-                  <div class="chip-detail">
-                    <label style="margin-right:6px">λ(/h):</label>
-                    <input v-model.number="comp.failureRate" type="number" step="any" class="failure-rate-input" placeholder="0.000001 或 1e-6" />
+                  <input
+                    ref="fileInput"
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    @change="handleFileUpload"
+                    style="display: none"
+                  >
+                  <div class="upload-content compact-upload-content">
+                    <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4c2.svg" alt="Excel" class="compact-upload-icon">
+                    <p class="compact-upload-text">点击或拖拽文件</p>
+                    <small class="compact-upload-hint">支持 .xlsx, .xls, .csv</small>
                   </div>
-                  <span class="chip-desc">{{ comp.description }}</span>
-                  <button @click="removeComponent(index)" class="remove-btn">删除</button>
+                </div>
+
+                <!-- LRU列表展示 -->
+                <div v-if="selectedComponents.length > 0" class="components-display compact-components">
+                  <div class="components-summary compact-summary">
+                    <span v-for="(count, type) in componentSummary" :key="type" class="summary-badge compact-badge">
+                      {{ type }}: {{ count }}
+                    </span>
+                  </div>
+
+                  <div class="components-list compact-list">
+                    <div v-for="(comp, index) in selectedComponents" :key="index" class="component-chip compact-chip">
+                      <span class="chip-main compact-main">{{ comp.type }} × {{ comp.quantity }}</span>
+                      <div class="chip-detail compact-detail">
+                        <label>λ(/h):</label>
+                        <input v-model.number="comp.failureRate" type="number" step="any" class="failure-rate-input compact-failure-input" placeholder="失效率" />
+                      </div>
+                      <span class="chip-desc compact-desc">{{ comp.description }}</span>
+                      <button @click="removeComponent(index)" class="remove-btn compact-remove">✕</button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <!-- 错误信息显示 -->
-            <div v-if="uploadError" class="error-details">
-              <h5>导入错误详情：</h5>
-              <pre>{{ uploadError }}</pre>
-              <button @click="uploadError = null" class="close-btn">关闭</button>
             </div>
           </div>
         </div>
 
-        <!-- 可靠性结果卡片 -->
-        <div class="card">
-          <div class="card-title">可靠性结果</div>
-          <div class="card-content result-row">
-            <div class="result-box purple">
-              <div class="result-label">系统可靠度</div>
-              <div class="result-value">{{ calculationResults.hasResults ? calculationResults.systemReliability.toFixed(4) : '--' }}</div>
+        <!-- 可靠性结果和操作按钮卡片 -->
+        <div class="card compact-card">
+          <div class="card-title">计算结果</div>
+          <div class="card-content compact-content">
+            <div class="result-row compact-result">
+              <div class="result-box purple compact-box">
+                <div class="result-label compact-label">系统可靠度</div>
+                <div class="result-value compact-value">{{ calculationResults.hasResults ? calculationResults.systemReliability.toFixed(4) : '--' }}</div>
+              </div>
+              <div class="result-box pink compact-box">
+                <div class="result-label compact-label">总失效率</div>
+                <div class="result-value compact-value">{{ calculationResults.hasResults ? calculationResults.totalFailureRate.toFixed(8) : '--' }}/h</div>
+              </div>
+              <div class="result-box blue compact-box">
+                <div class="result-label compact-label">MTBF</div>
+                <div class="result-value compact-value">{{ calculationResults.hasResults ? calculationResults.mtbf.toFixed(2) : '--' }} h</div>
+              </div>
             </div>
-            <div class="result-box pink">
-              <div class="result-label">总失效率</div>
-              <div class="result-value">{{ calculationResults.hasResults ? calculationResults.totalFailureRate.toFixed(8) : '--' }}/h</div>
+            <div class="action-buttons compact-actions">
+              <button @click="calculateReliability" class="calculate-btn compact-action-btn">计算</button>
+              <button @click="saveCurrentSystem" class="save-btn compact-action-btn" :disabled="!calculationResults.hasResults">
+                保存
+              </button>
+              <button @click="saveAndView" class="save-btn compact-action-btn" :disabled="!calculationResults.hasResults">
+                保存并查看
+              </button>
             </div>
-            <div class="result-box blue">
-              <div class="result-label">MTBF</div>
-              <div class="result-value">{{ calculationResults.hasResults ? calculationResults.mtbf.toFixed(2) : '--' }} h</div>
-            </div>
-          </div>
-          <div class="action-buttons">
-            <button @click="calculateReliability" class="calculate-btn">计算可靠性</button>
-            <button @click="saveCurrentSystem" class="save-btn" :disabled="!calculationResults.hasResults">
-              保存系统结果
-            </button>
-            <button @click="saveAndView" class="save-btn" :disabled="!calculationResults.hasResults">
-              保存并查看结果
-            </button>
           </div>
         </div>
 
-        <!-- 🆕 新增：已保存系统列表 -->
-        <div class="card" v-if="savedBasicSystems.length > 0">
-          <div class="card-title">已保存的基本可靠性系统</div>
-          <div class="card-content">
-            <div class="saved-systems-grid">
-              <div v-for="system in savedBasicSystems" :key="system.id" class="saved-system-card">
-                <div class="saved-system-header">
-                  <h4>{{ system.name }}</h4>
-                  <div class="saved-system-actions">
-                    <button @click="loadSystem(system)" class="action-btn load">加载</button>
-                    <button @click="removeSavedSystem(system.id)" class="action-btn remove">删除</button>
+        <!-- 已保存系统列表卡片 -->
+        <div class="card compact-card" v-if="savedBasicSystems.length > 0">
+          <div class="card-title">已保存系统</div>
+          <div class="card-content compact-content saved-systems-container">
+            <div class="saved-systems-grid compact-grid">
+              <div v-for="system in savedBasicSystems" :key="system.id" class="saved-system-card compact-saved-card">
+                <div class="saved-system-header compact-saved-header">
+                  <h4 class="compact-saved-title">{{ system.name }}</h4>
+                  <div class="saved-system-actions compact-saved-actions">
+                    <button @click="loadSystem(system)" class="action-btn load compact-action">加载</button>
+                    <button @click="removeSavedSystem(system.id)" class="action-btn remove compact-action">删除</button>
                   </div>
                 </div>
-                <div class="saved-system-details">
-                  <div class="detail-row">
-                    <span>任务时间:</span>
+                <div class="saved-system-details compact-saved-details">
+                  <div class="detail-row compact-detail-row">
+                    <span>时间:</span>
                     <strong>{{ system.missionTime }}h</strong>
                   </div>
-                  <div class="detail-row">
-                    <span>总失效率:</span>
+                  <div class="detail-row compact-detail-row">
+                    <span>失效率:</span>
                     <strong>{{ system.totalFailureRate.toExponential(6) }}/h</strong>
                   </div>
-                  <div class="detail-row">
-                    <span>系统可靠度:</span>
+                  <div class="detail-row compact-detail-row">
+                    <span>可靠度:</span>
                     <strong>{{ system.systemReliability.toFixed(4) }}</strong>
                   </div>
-                  <div class="detail-row">
+                  <div class="detail-row compact-detail-row">
                     <span>LRU:</span>
                     <strong>{{ system.components.length }} 个</strong>
                   </div>
                 </div>
-                <div class="saved-system-footer">
-                  <small>保存时间: {{ system.timestamp }}</small>
-                </div>
               </div>
             </div>
-            <div class="batch-actions">
-              <button @click="importAllToTaskReliability" class="calculate-btn">
+            <div class="batch-actions compact-batch">
+              <button @click="importAllToTaskReliability" class="calculate-btn compact-batch-btn">
                 📥 批量导入到任务可靠性
               </button>
-              <p class="template-tip">将所有已保存系统导入到任务可靠性计算中</p>
             </div>
           </div>
         </div>
@@ -1300,6 +1249,37 @@ onMounted(() => {
   transition: all 0.3s;
 }
 
+/* 调整按钮位置 */
+.tool-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  margin-bottom: 1rem;
+}
+
+.tool-tabs {
+  display: flex;
+  gap: 1rem;
+}
+
+.green-line {
+  height: 2px;
+  background-color: #4CAF50;
+  margin: 1rem 0;
+}
+
+/* 确保按钮在绿色线上方 */
+.tool-header {
+  position: relative;
+  z-index: 1;
+}
+
+.green-line {
+  position: relative;
+  z-index: 0;
+}
+
 .saved-system-card:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   transform: translateY(-2px);
@@ -1387,6 +1367,287 @@ onMounted(() => {
   text-align: center;
   padding-top: 16px;
   border-top: 1px solid #e9ecef;
+}
+
+/* 紧凑化设计样式 */
+.compact-section {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.compact-section::-webkit-scrollbar {
+  width: 6px;
+}
+
+.compact-section::-webkit-scrollbar-thumb {
+  background-color: #c5c5c5;
+  border-radius: 3px;
+}
+
+.compact-card {
+  margin-bottom: 12px;
+  border-radius: 8px;
+}
+
+.compact-card .card-title {
+  padding: 12px 16px;
+  font-size: 1rem;
+  border-bottom: none;
+}
+
+.compact-content {
+  padding: 16px;
+}
+
+.compact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.compact-param-item {
+  display: flex;
+  align-items: center;
+}
+
+.compact-param-item label {
+  color: #764ba2;
+  font-weight: 600;
+  margin-right: 6px;
+  width: 60px;
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.compact-input {
+  border: 2px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  background: #ffffff;
+  transition: all 0.3s ease;
+  outline: none;
+  flex: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.compact-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1), 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.compact-input-unit {
+  display: flex;
+  align-items: center;
+}
+
+.compact-lru-section {
+  grid-column: span 2;
+  padding: 2px;
+}
+
+.compact-template {
+  margin-bottom: 0.6rem;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.compact-btn {
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 0.75rem;
+}
+
+.compact-tip {
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 0.4rem;
+}
+
+.compact-upload {
+  border: 2px dashed #667eea;
+  border-radius: 6px;
+  padding: 1rem 0.8rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #f8f9ff;
+}
+
+.compact-upload:hover {
+  background: #eef1ff;
+  border-color: #764ba2;
+}
+
+.compact-upload-icon {
+  width: 32px;
+  margin-bottom: 8px;
+}
+
+.compact-upload-text {
+  font-size: 0.9rem;
+  margin: 0 0 4px 0;
+}
+
+.compact-upload-hint {
+  font-size: 0.8rem;
+}
+
+.compact-components {
+  margin-top: 0.6rem;
+}
+
+.compact-summary {
+  gap: 4px;
+  margin-bottom: 0.6rem;
+}
+
+.compact-badge {
+  padding: 2px 5px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+}
+
+.compact-list {
+  gap: 0.3rem;
+}
+
+.compact-chip {
+  border-radius: 8px;
+  padding: 8px 12px;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.compact-main {
+  font-weight: 600;
+  min-width: 70px;
+}
+
+.compact-detail {
+  min-width: 90px;
+  font-size: 0.8rem;
+}
+
+.compact-failure-input {
+  border: 2px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  width: 100px;
+  text-align: center;
+}
+
+.compact-desc {
+  font-size: 0.8rem;
+}
+
+.compact-remove {
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+}
+
+.compact-result {
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.compact-box {
+  border-radius: 8px;
+  padding: 16px 8px;
+}
+
+.compact-label {
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.compact-value {
+  font-size: 1.5rem;
+}
+
+.compact-actions {
+  gap: 0.8rem;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.compact-action-btn {
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  border-radius: 8px;
+}
+
+.saved-systems-container {
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.saved-systems-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.saved-systems-container::-webkit-scrollbar-thumb {
+  background-color: #c5c5c5;
+  border-radius: 2.5px;
+}
+
+.compact-saved-card {
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.compact-saved-header {
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+}
+
+.compact-saved-title {
+  font-size: 0.9rem;
+}
+
+.compact-saved-actions {
+  gap: 4px;
+}
+
+.compact-action {
+  padding: 2px 5px;
+  border-radius: 2px;
+  font-size: 0.7rem;
+}
+
+.compact-saved-details {
+  gap: 3px;
+}
+
+.compact-detail-row {
+  padding: 1px 0;
+  font-size: 0.95em;
+}
+
+.compact-detail-row span {
+  font-size: 0.8rem;
+}
+
+.compact-detail-row strong {
+  font-size: 0.85rem;
+}
+
+.compact-batch {
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.compact-batch-btn {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  border-radius: 6px;
 }
 
 /* 🆕 新增：任务可靠性结果保存样式 */
@@ -1776,7 +2037,6 @@ onMounted(() => {
 
 .card-title {
   padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
   font-size: 1.25rem;
   font-weight: 600;
   color: #2d3748;
@@ -2112,6 +2372,12 @@ onMounted(() => {
   gap: 20px;
   justify-content: center;
   margin: 24px 0;
+  padding-bottom: 20px;
+}
+
+.tool-header h1 {
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
 }
 .tab {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
