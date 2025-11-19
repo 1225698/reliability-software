@@ -9,10 +9,7 @@
       @dragover.prevent
       @drop="onCanvasDrop"
     >
-      <ModelingCanvas ref="canvasRef" @select="onSelect" />
-    </div>
-    <div class="properties">
-      <PropertyPanel :selected="selectedItem" />
+      <ModelingCanvas ref="canvasRef" />
     </div>
   </div>
 </template>
@@ -21,14 +18,8 @@
 import { ref } from 'vue';
 import ComponentPalette from '@/components/modeling/ComponentPalette.vue';
 import ModelingCanvas from '@/components/modeling/ModelingCanvas.vue';
-import PropertyPanel from '@/components/modeling/PropertyPanel.vue';
 
 const canvasRef = ref(null);
-const selectedItem = ref(null);
-
-const onSelect = (item) => {
-  selectedItem.value = item;
-};
 
 const onCanvasDrop = (event) => {
   if (canvasRef.value) {
@@ -49,10 +40,5 @@ const onCanvasDrop = (event) => {
 }
 .canvas {
   flex-grow: 1;
-}
-.properties {
-  width: 250px;
-  border-left: 1px solid #ccc;
-  background-color: #f9f9f9;
 }
 </style>
