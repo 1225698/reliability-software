@@ -70,34 +70,7 @@
                 </div>
               </div>
 
-              <!-- Excel模板说明 -->
-              <div class="template-info">
-                <h4>Excel模板格式：</h4>
-                <table class="template-table">
-                  <thead>
-                    <tr>
-                      <th>类型</th>
-                      <th>数量</th>
-                      <th>失效率</th>
-                      <th>描述</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>电阻</td>
-                      <td>10</td>
-                      <td>0.000001</td>
-                      <td>10kΩ碳膜电阻</td>
-                    </tr>
-                    <tr>
-                      <td>集成电路</td>
-                      <td>2</td>
-                      <td>0.00001</td>
-                      <td>运算放大器</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+
             </div>
 
             <!-- LRU列表展示 -->
@@ -638,7 +611,7 @@ const {
 // 🆕 新增：基本可靠性系统保存方法
 const saveCurrentSystem = () => {
   if (!calculationResults.value.hasResults) {
-    
+
     return
   }
 
@@ -672,7 +645,7 @@ const loadSystem = (system) => {
   // 重新计算
   calculateReliability()
 
-  
+
 }
 
 const removeSavedSystem = (id) => {
@@ -735,7 +708,7 @@ const importFromSavedSystems = () => {
   )
 
   if (systemsToImport.length === 0) {
-    
+
     return
   }
 
@@ -777,7 +750,7 @@ const isManualSystemValid = computed(() => {
 
 const addManualSystem = () => {
   if (!isManualSystemValid.value) {
-    
+
     return
   }
 
@@ -1197,7 +1170,7 @@ const factorial = (n) => {
 const downloadTemplate = () => {
   try {
     if (typeof XLSX === 'undefined') {
-      
+
       return
     }
 
@@ -1212,11 +1185,11 @@ const downloadTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet(templateData)
     XLSX.utils.book_append_sheet(wb, ws, 'LRU配置')
     XLSX.writeFile(wb, '可靠性分析_LRU模板.xlsx')
-    
+
 
   } catch (error) {
     console.error('生成模板失败:', error)
-    
+
   }
 }
 
