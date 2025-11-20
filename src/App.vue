@@ -7,6 +7,7 @@
     <router-link to="/modeling">可靠性建模</router-link>
   <router-link to="/calculator">可靠性预计</router-link>
   <router-link to="/allocation">可靠性分配</router-link>
+  <router-link to="/fault-tree">故障树分析</router-link>
       </nav>
     </aside>
     <main class="main-content">
