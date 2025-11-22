@@ -171,6 +171,12 @@ export function AllocationProvider({ children }: { children: React.ReactNode }) 
   }, [systemResults, state.units, state.params.margin]);
 
   const exportAll = () => {
+    // 校验系统级数据
+    const allZeroOrEmpty = systemResults.length === 0 || systemResults.every(r => !r.estFailureRate || Number(r.estFailureRate) === 0);
+    if (allZeroOrEmpty) {
+      alert('请先导入系统级数据并填写预计故障率后再导出！');
+      return;
+    }
     import('xlsx').then(xlsx => {
       const sysSheetData = [
         ['系统名称', '预计故障率(1/h)', '分配系数k', '分配MTBF(h)', '分配故障率(1/h)'],

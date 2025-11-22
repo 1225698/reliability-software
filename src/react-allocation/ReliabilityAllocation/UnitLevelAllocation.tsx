@@ -20,6 +20,12 @@ export const UnitLevelAllocation: React.FC = () => {
       alert('请先在系统级结果中选择一个系统行。');
       return;
     }
+    // 校验 systemId 是否存在于系统列表
+    const systemIds = systemResults.map(s => s.id);
+    if (!systemIds.includes(selectedSystemId)) {
+      alert('当前选中的分系统不存在，请先导入系统级数据并选择正确的分系统！');
+      return;
+    }
     const mapped: UnitInputRow[] = rows.filter(r => r['单元名称']).map((r, i) => ({
       id: `unit-import-${i}-${Date.now()}`,
       systemId: selectedSystemId,
@@ -32,7 +38,7 @@ export const UnitLevelAllocation: React.FC = () => {
     } else {
       alert('未识别到有效列，请确认表头：单元名称, 数量, 预计故障率');
     }
-  }, [dispatch, selectedSystemId]);
+  }, [dispatch, selectedSystemId, systemResults]);
 
   const updateUnit = (id: string, patch: Partial<UnitInputRow>) => {
     dispatch({ type: 'UPDATE_UNIT', payload: { id, patch } });
@@ -102,8 +108,13 @@ export const UnitLevelAllocation: React.FC = () => {
               <div style={{ marginTop: '.5rem' }}>
                 <button
                   onClick={() => {
-                    const id = `unit-${Date.now()}`;
-                    dispatch({ type: 'ADD_UNIT', payload: { id, systemId: selectedSystemId!, name: '新单元', quantity: 1, estFailureRate: null } });
+                    if (!selectedSystemId) return;
+                    try {
+                      const id = `unit-${Date.now()}`;
+                      dispatch({ type: 'ADD_UNIT', payload: { id, systemId: selectedSystemId, name: '新单元', quantity: 1, estFailureRate: null } });
+                    } catch (e) {
+                      alert('添加单元异常：' + (e instanceof Error ? e.message : String(e)));
+                    }
                   }}
                   style={{ padding: '.45rem .8rem', background: '#1476ff', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                 >+ 添加单元</button>
@@ -125,18 +136,27 @@ export const UnitLevelAllocation: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {unitResults.map(r => (
-                    <tr key={r.id}>
-                      <td>{r.name}</td>
-                      <td>{r.quantity}</td>
-                      <td>{r.k ? format(r.k,4) : '-'}</td>
-                      <td>{r.allocatedMTBF ? format(r.allocatedMTBF,2) : '-'}</td>
-                      <td>{r.allocatedFailureRate ? format(r.allocatedFailureRate,8) : '-'}</td>
-                    </tr>
-                  ))}
+                  {unitResults.length === 0 ? (
+                    <tr><td colSpan={5} style={{ color: '#aaa', textAlign: 'center' }}>暂无单元分配数据，请先添加单元并填写预计故障率</td></tr>
+                  ) : (
+                    unitResults.map(r => (
+                      <tr key={r.id}>
+                        <td>{r.name}</td>
+                        <td>{r.quantity}</td>
+                        <td>{r.k ? format(r.k,4) : '-'}</td>
+                        <td>{r.allocatedMTBF ? format(r.allocatedMTBF,2) : '-'}</td>
+                        <td>{r.allocatedFailureRate ? format(r.allocatedFailureRate,8) : '-'}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
+            {unitResults.length === 0 && (
+              <div style={{ color: '#888', fontSize: 13, textAlign: 'center', margin: '1.2rem 0 0 0' }}>
+                暂无单元分配结果，请先在上方添加单元数据并填写预计故障率。
+              </div>
+            )}
           </section>
         </>
       )}
