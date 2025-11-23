@@ -45,19 +45,31 @@
     >
       <!-- Redundancy Model -->
       <template v-if="item.modelType === 'redundancy'">
-        <div class="redundancy-container">
-          <svg class="redundancy-svg">
-            <path d="M 0 110 L 30 110" fill="none" stroke="black" stroke-width="2"/>
+        <div class="redundancy-container" :style="{ width: getRedundancyLayout(item).totalWidth + 'px', height: getRedundancyLayout(item).height + 'px' }">
+          <svg class="redundancy-svg" :style="{ width: getRedundancyLayout(item).totalWidth + 'px', height: getRedundancyLayout(item).height + 'px' }">
+            <path :d="`M 0 ${getRedundancyLayout(item).baseCenterY} L ${getRedundancyLayout(item).entryLength} ${getRedundancyLayout(item).baseCenterY}`" fill="none" stroke="black" stroke-width="2"/>
             <template v-for="(cy,i) in getRedundancyLayout(item).branchCenters" :key="i">
-              <path :d="`M 30 110 L 80 ${cy}`" fill="none" stroke="black" stroke-width="2" />
-              <path :d="`M 180 ${cy} L 230 110`" fill="none" stroke="black" stroke-width="2" />
+              <path :d="`M ${getRedundancyLayout(item).entryLength} ${getRedundancyLayout(item).baseCenterY} L ${getRedundancyLayout(item).branchStartX} ${cy}`" fill="none" stroke="black" stroke-width="2" />
+              <path :d="`M ${getRedundancyLayout(item).branchEndX} ${cy} L ${getRedundancyLayout(item).circleCenterX - getRedundancyLayout(item).circleRadius} ${getRedundancyLayout(item).baseCenterY}`" fill="none" stroke="black" stroke-width="2" />
             </template>
-            <circle cx="260" cy="110" r="30" fill="white" stroke="black" stroke-width="2"/>
-            <text x="260" y="115" text-anchor="middle" font-size="16">{{ item.k }}/{{ item.n }}</text>
-            <line x1="290" y1="110" x2="320" y2="110" stroke="black" stroke-width="2"/>
+            <circle :cx="getRedundancyLayout(item).circleCenterX" :cy="getRedundancyLayout(item).baseCenterY" :r="getRedundancyLayout(item).circleRadius" fill="white" stroke="black" stroke-width="2"/>
+            <text :x="getRedundancyLayout(item).circleCenterX" :y="getRedundancyLayout(item).baseCenterY + 5" text-anchor="middle" font-size="16">{{ item.k }}/{{ item.n }}</text>
+            <line :x1="getRedundancyLayout(item).circleCenterX + getRedundancyLayout(item).circleRadius" :y1="getRedundancyLayout(item).baseCenterY" :x2="getRedundancyLayout(item).outputEndX" :y2="getRedundancyLayout(item).baseCenterY" stroke="black" stroke-width="2"/>
           </svg>
-          <div class="redundancy-branches" :style="{ position: 'absolute', top: 0, left: '80px', width: '100px', height: '100%' }">
-            <div v-for="(branch, index) in item.branches" :key="branch.id" class="component-container" :data-item-id="item.id" :data-branch-index="index" :style="{ position:'absolute', top: getRedundancyLayout(item).branchTops[index] + 'px', height: getRedundancyLayout(item).branchHeight + 'px', width:'100px' }">
+          <div class="redundancy-branches" :style="{ position: 'absolute', top: 0, left: getRedundancyLayout(item).branchStartX + 'px', width: getRedundancyLayout(item).branchWidth + 'px', height: '100%' }">
+            <div
+              v-for="(branch, index) in item.branches"
+              :key="index"
+              class="component-container"
+              :data-item-id="item.id"
+              :data-branch-index="index"
+              :style="{
+                position: 'absolute',
+                top: getRedundancyLayout(item).branchTops[index] + 'px',
+                height: getRedundancyLayout(item).branchHeight + 'px',
+                width: getRedundancyLayout(item).branchWidth + 'px'
+              }"
+            >
               <div v-for="comp in branch.components" :key="comp.id" class="dropped-component">
                 {{ comp.name }}
               </div>
@@ -68,23 +80,29 @@
 
       <!-- Parallel Model (dynamic) -->
       <template v-else-if="item.modelType === 'parallel'">
-        <div class="parallel-container" :style="{ height: getParallelLayout(item).height + 'px' }">
-          <svg class="parallel-svg" :style="{ height: getParallelLayout(item).height + 'px' }">
-            <path :d="`M 0 ${getParallelLayout(item).centerY} L 50 ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
-            <path :d="`M 190 ${getParallelLayout(item).centerY} L 240 ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
+        <div class="parallel-container" :style="{ height: getParallelLayout(item).height + 'px', width: getParallelLayout(item).totalWidth + 'px' }">
+          <svg class="parallel-svg" :style="{ height: getParallelLayout(item).height + 'px', width: getParallelLayout(item).totalWidth + 'px' }">
+            <path :d="`M 0 ${getParallelLayout(item).centerY} L ${getParallelLayout(item).leftBusX} ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
+            <path :d="`M ${getParallelLayout(item).rightBusX} ${getParallelLayout(item).centerY} L ${getParallelLayout(item).totalWidth} ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
             <template v-for="(cy, i) in getParallelLayout(item).branchCenters" :key="i">
-              <path :d="`M 50 ${getParallelLayout(item).centerY} L 50 ${cy} L 70 ${cy}`" fill="none" stroke="black" stroke-width="2"/>
-              <path :d="`M 170 ${cy} L 190 ${cy} L 190 ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
+              <path :d="`M ${getParallelLayout(item).leftBusX} ${getParallelLayout(item).centerY} L ${getParallelLayout(item).leftBusX} ${cy} L ${getParallelLayout(item).branchStartX} ${cy}`" fill="none" stroke="black" stroke-width="2"/>
+              <path :d="`M ${getParallelLayout(item).branchEndX} ${cy} L ${getParallelLayout(item).rightBusX} ${cy} L ${getParallelLayout(item).rightBusX} ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
             </template>
           </svg>
-          <div class="parallel-branches" :style="{ height: getParallelLayout(item).height + 'px' }">
+          <div class="parallel-branches" :style="{ height: getParallelLayout(item).height + 'px', width: getParallelLayout(item).totalWidth + 'px' }">
             <div
               v-for="(branch, bIndex) in item.branches"
               :key="bIndex"
               class="component-container"
               :data-item-id="item.id"
               :data-branch-index="bIndex"
-              :style="{ position: 'absolute', top: getParallelLayout(item).branchTops[bIndex] + 'px', left: '70px', width: '100px', height: getParallelLayout(item).branchHeight + 'px' }"
+              :style="{
+                position: 'absolute',
+                top: getParallelLayout(item).branchTops[bIndex] + 'px',
+                left: getParallelLayout(item).branchStartX + 'px',
+                width: getParallelLayout(item).branchWidth + 'px',
+                height: getParallelLayout(item).branchHeight + 'px'
+              }"
             >
               <div v-for="comp in branch.components" :key="comp.id" class="dropped-component">{{ comp.name }}</div>
             </div>
@@ -164,7 +182,6 @@ const connections = ref([]);
 let idCounter = 0;
 let componentInstanceCounter = 0;
 
-const SERIES_CONTAINER_WIDTH = 100;
 const SERIES_CONTAINER_HEIGHT = 50;
 const SERIES_HORIZONTAL_GAP = 75; // adjusted spacing for shorter connectors
 const SERIES_MARGIN_X = 20;
@@ -175,6 +192,62 @@ const AUTO_LAYOUT_MAX_PER_ROW = 4;
 const AUTO_LAYOUT_GAP_X = 20;
 const AUTO_LAYOUT_GAP_Y = 100;
 
+const COMPONENT_MIN_WIDTH = 100;
+const COMPONENT_MAX_WIDTH = 240;
+const COMPONENT_MAX_WIDTH_REDUNDANCY = 180;
+const COMPONENT_LABEL_PADDING = 18;
+const LABEL_MEASURE_FONT = '500 13px "Microsoft YaHei", sans-serif';
+
+let textMeasureContext = null;
+if (typeof document !== 'undefined') {
+  const measureCanvas = document.createElement('canvas');
+  textMeasureContext = measureCanvas.getContext('2d');
+  if (textMeasureContext) {
+    textMeasureContext.font = LABEL_MEASURE_FONT;
+  }
+}
+
+function measureLabelWidth(label) {
+  if (!label) return 0;
+  const text = String(label);
+  if (textMeasureContext && textMeasureContext.measureText) {
+    return textMeasureContext.measureText(text).width;
+  }
+  return text.length * 14;
+}
+
+function getMaxComponentLabelWidth(item) {
+  let max = 0;
+  const checkComponent = (comp) => {
+    if (!comp) return;
+    const width = measureLabelWidth(comp.name || '');
+    if (width > max) max = width;
+  };
+
+  if (item.modelType === 'parallel' || item.modelType === 'redundancy') {
+    if (Array.isArray(item.branches)) {
+      item.branches.forEach(branch => {
+        if (Array.isArray(branch.components)) {
+          branch.components.forEach(checkComponent);
+        }
+      });
+    }
+  } else {
+    if (Array.isArray(item.components)) {
+      item.components.forEach(checkComponent);
+    }
+  }
+
+  return max;
+}
+
+function getAdaptiveContainerWidth(item) {
+  const raw = getMaxComponentLabelWidth(item);
+  const padded = raw + COMPONENT_LABEL_PADDING;
+  const maxWidth = item.modelType === 'redundancy' ? COMPONENT_MAX_WIDTH_REDUNDANCY : COMPONENT_MAX_WIDTH;
+  return Math.ceil(Math.min(maxWidth, Math.max(COMPONENT_MIN_WIDTH, padded)));
+}
+
 const createComponentInstance = (component, slot) => {
   const uniqueId = `${component.id || 'component'}-${componentInstanceCounter++}`;
   const instance = { ...component, id: uniqueId };
@@ -184,7 +257,7 @@ const createComponentInstance = (component, slot) => {
 
 function getSeriesLayout(item) {
   const containerCount = Math.max(1, item.containers ?? 2);
-  const containerWidth = SERIES_CONTAINER_WIDTH;
+  const containerWidth = getAdaptiveContainerWidth(item);
   const containerHeight = SERIES_CONTAINER_HEIGHT;
   const columns = Math.min(containerCount, SERIES_MAX_COLUMNS);
   const rows = Math.ceil(containerCount / SERIES_MAX_COLUMNS);
@@ -258,12 +331,23 @@ function getSeriesContainerStyle(item, index) {
   };
 }
 
-function syncSeriesItemStyle(item) {
-  if (item.modelType !== 'series') return;
-  const layout = getSeriesLayout(item);
+function syncItemStyle(item) {
+  if (!item || item.type !== 'model') return;
   if (!item.style) item.style = {};
-  item.style.width = `${layout.width}px`;
-  item.style.height = `${layout.height}px`;
+
+  if (item.modelType === 'series') {
+    const layout = getSeriesLayout(item);
+    item.style.width = `${layout.width}px`;
+    item.style.height = `${layout.height}px`;
+  } else if (item.modelType === 'parallel') {
+    const layout = getParallelLayout(item);
+    item.style.width = `${layout.totalWidth}px`;
+    item.style.height = `${layout.height}px`;
+  } else if (item.modelType === 'redundancy') {
+    const layout = getRedundancyLayout(item);
+    item.style.width = `${layout.totalWidth}px`;
+    item.style.height = `${layout.height}px`;
+  }
 }
 
 const draggedItemId = ref(null);
@@ -309,9 +393,8 @@ const onCanvasDrop = (event) => {
     } else { // Series
       newItem.containers = 2;
       newItem.components = [];
-      const layout = getSeriesLayout(newItem);
-      newItem.style = { ...newItem.style, width: `${layout.width}px`, height: `${layout.height}px` };
     }
+    syncItemStyle(newItem);
     items.value.push(newItem);
     nextTick(() => updateItemConnectors(newItem.id));
   } else if (data.type === 'component') {
@@ -338,6 +421,7 @@ const onCanvasDrop = (event) => {
             targetItem.components.push(createComponentInstance(data.component));
           }
         }
+        nextTick(() => updateItemConnectors(targetItem.id));
       }
     }
   }
@@ -533,7 +617,7 @@ function adjustSeriesContainerCount(item, desired) {
   if (target < current) {
     item.components = item.components.filter(comp => (comp.slot ?? 0) < target);
   }
-  syncSeriesItemStyle(item);
+  syncItemStyle(item);
 }
 
 const onDeleteItem = () => {
@@ -1038,9 +1122,16 @@ const getItemDimensions = (item) => {
   let width, height, inY, outY;
   if (item.modelType === 'parallel') {
     const layout = getParallelLayout(item);
-    width = 240; height = layout.height; inY = layout.centerY; outY = layout.centerY;
+    width = layout.totalWidth;
+    height = layout.height;
+    inY = layout.centerY;
+    outY = layout.centerY;
   } else if (item.modelType === 'redundancy') {
-    width = 320; height = 220; inY = 110; outY = 110;
+    const layout = getRedundancyLayout(item);
+    width = layout.totalWidth;
+    height = layout.height;
+    inY = layout.baseCenterY;
+    outY = layout.baseCenterY;
   } else { // Series
     const layout = getSeriesLayout(item);
     width = layout.width;
@@ -1065,7 +1156,7 @@ const getItemConnectors = (item, customLeft, customTop) => {
 const updateItemConnectors = (itemId) => {
   const item = items.value.find(i => i.id === itemId);
   if (item) {
-    syncSeriesItemStyle(item);
+    syncItemStyle(item);
     const connectors = getItemConnectors(item);
     item.connectors.in.x = connectors.in.x;
     item.connectors.in.y = connectors.in.y;
@@ -1116,33 +1207,86 @@ const connectionPaths = computed(() => {
 
 // Parallel dynamic layout helper
 function getParallelLayout(item) {
-  const branchCount = item.branches.length;
+  const branchCount = Math.max(1, Array.isArray(item.branches) ? item.branches.length : 0);
   const branchHeight = 50;
   const spacing = 10;
   const margin = 10;
+  const branchWidth = getAdaptiveContainerWidth(item);
+  const entryLength = 50;
+  const branchGap = 20;
+  const exitLength = 50;
+
+  const leftBusX = entryLength;
+  const branchStartX = leftBusX + branchGap;
+  const branchEndX = branchStartX + branchWidth;
+  const rightBusX = branchEndX + branchGap;
+  const totalWidth = rightBusX + exitLength;
+
   const height = margin + branchCount * branchHeight + (branchCount - 1) * spacing + margin;
   const centerY = height / 2;
   const branchTops = Array.from({ length: branchCount }, (_, i) => margin + i * (branchHeight + spacing));
   const branchCenters = branchTops.map(t => t + branchHeight / 2);
-  return { height, centerY, branchTops, branchCenters, branchHeight };
+
+  return {
+    height,
+    centerY,
+    branchTops,
+    branchCenters,
+    branchHeight,
+    branchWidth,
+    branchStartX,
+    branchEndX,
+    leftBusX,
+    rightBusX,
+    totalWidth,
+  };
 }
 
 // Redundancy dynamic layout helper (fixed overall size but variable branch centers)
 function getRedundancyLayout(item) {
-  const branchCount = item.branches.length;
+  const branchCount = Math.max(1, Array.isArray(item.branches) ? item.branches.length : 0);
   const branchHeight = 40;
-  // Target symmetric bounds from original static positions (approx): 35 .. 185 around center 110
+  const baseCenterY = 110;
+  const branchWidth = getAdaptiveContainerWidth(item);
+  const entryLength = 30;
+  const branchGap = 20;
+  const circleGap = 50;
+  const exitLength = 30;
+  const circleRadius = 30;
+
+  const branchStartX = entryLength + branchGap;
+  const branchEndX = branchStartX + branchWidth;
+  const circleCenterX = branchEndX + circleGap;
+  const outputEndX = circleCenterX + circleRadius + exitLength;
+
   const minY = 35;
   const maxY = 185;
   let branchCenters;
   if (branchCount === 1) {
-    branchCenters = [110];
+    branchCenters = [baseCenterY];
   } else {
     const spacing = (maxY - minY) / (branchCount - 1);
     branchCenters = Array.from({ length: branchCount }, (_, i) => minY + i * spacing);
   }
   const branchTops = branchCenters.map(cy => cy - branchHeight / 2);
-  return { branchCenters, branchTops, branchHeight };
+
+  const height = baseCenterY * 2;
+
+  return {
+    branchCenters,
+    branchTops,
+    branchHeight,
+    branchStartX,
+    branchEndX,
+    branchWidth: branchWidth,
+    entryLength,
+    circleCenterX,
+    circleRadius,
+    outputEndX,
+    baseCenterY,
+    totalWidth: outputEndX,
+    height,
+  };
 }
 
 watch(items, () => {
@@ -1198,19 +1342,27 @@ watch(items, () => {
   min-height: 40px;
   min-width: 80px;
   background-color: #f9f9f9;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 4px;
+  align-items: stretch;
 }
 .dropped-component {
   background-color: lightgreen;
-  padding: 2px;
-  margin-top: 2px;
+  padding: 3px 6px;
+  margin-top: 0;
   text-align: center;
+  border-radius: 4px;
+  word-break: break-all;
+  white-space: normal;
+  line-height: 1.25;
+  width: 100%;
+  align-self: stretch;
 }
 
 /* Redundancy Model Styles */
-.redundancy {
-  width: 320px;
-  height: 220px;
-}
 .redundancy-container {
   position: relative;
   width: 100%;
@@ -1234,7 +1386,7 @@ watch(items, () => {
 
 /* Parallel Model Styles */
 .parallel {
-  width: 240px; /* height dynamic */
+  width: auto;
 }
 .parallel-container {
   position: relative;
