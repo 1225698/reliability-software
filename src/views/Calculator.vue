@@ -1097,11 +1097,21 @@ const calculateVoteFailureRate = () => {
   if (!isVoteParamsValid.value) return
 
   const { N, k } = voteParams.value
-  const λ_base = voteModule.value.baseFailureRate
-  const t = missionTime.value
+  const λ_base = Number(voteModule.value.baseFailureRate)
+  const t = Number(missionTime.value)
+
+  if (!Number.isFinite(t) || t <= 0) {
+    alert('请先在基础可靠性计算中设置有效的任务时间，再计算表决模块。')
+    return
+  }
+
+  if (!Number.isFinite(λ_base) || λ_base < 0) {
+    alert('基本失效率无效，请重新选择系统或检查数据。')
+    return
+  }
 
   const R_base = Math.exp(-λ_base * t)
-  const Q_base = 1 - R_base
+  const Q_base = Math.max(0, 1 - R_base)
 
   let R_vote = 0
   for (let i = k; i <= N; i++) {
@@ -1109,9 +1119,21 @@ const calculateVoteFailureRate = () => {
     R_vote += combination * Math.pow(R_base, i) * Math.pow(Q_base, N - i)
   }
 
-  const λ_vote = -Math.log(R_vote) / t
+  if (!Number.isFinite(R_vote) || R_vote <= 0) {
+    alert('计算结果异常，请检查参数 N、k 以及基础失效率。')
+    return
+  }
+
+  const safeR = Math.min(Math.max(R_vote, Number.EPSILON), 1)
+  const λ_vote = -Math.log(safeR) / t
+  if (!Number.isFinite(λ_vote) || λ_vote < 0) {
+    alert('计算出的等效故障率无效，请调整参数后重试。')
+    return
+  }
   voteModule.value.failureRate = parseFloat(λ_vote.toFixed(8))
-  taskModules.value[0].failureRate = voteModule.value.failureRate
+  if (Array.isArray(taskModules.value) && taskModules.value.length > 0) {
+    taskModules.value[0].failureRate = voteModule.value.failureRate
+  }
   isVoteCalculated.value = true
 }
 
