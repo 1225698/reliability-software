@@ -10,7 +10,7 @@ interface DataImportProps {
 
 const templates: Record<string, string[][]> = {
   system: [ ['系统名称', '预计故障率(1/h)'], ['感知系统', '0.000137719'], ['传输系统', '0.000013'] ],
-  unit: [ ['单元名称', '数量', '预计故障率'], ['通讯浮标舱', '1', '0.000009979'] ],
+  unit: [ ['LRU名称', '数量', '预计故障率'], ['通讯浮标舱', '1', '0.000009979'] ],
 };
 
 export const DataImport: React.FC<DataImportProps> = ({ label = '导入Excel', templateType, onData, small }) => {
@@ -38,7 +38,7 @@ export const DataImport: React.FC<DataImportProps> = ({ label = '导入Excel', t
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(templates[templateType]);
     XLSX.utils.book_append_sheet(wb, ws, '模板');
-    XLSX.writeFile(wb, `${templateType === 'system' ? '系统' : '单元'}数据模板.xlsx`);
+    XLSX.writeFile(wb, `${templateType === 'system' ? '系统' : 'LRU'}数据模板.xlsx`);
   };
 
   return (

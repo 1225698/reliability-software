@@ -30,6 +30,7 @@
         height: hoveredGroup.bbox.height + 'px'
       }"
       @mousedown.stop="onGroupMouseDown($event)"
+      @contextmenu.prevent.stop="onGroupContextMenu($event)"
     ></div>
 
     <!-- Canvas Items -->
@@ -99,9 +100,9 @@
               v-for="(segment, segIndex) in getSeriesLayout(item).segments"
               :key="segIndex"
               :x1="segment.x1"
-              :y1="getSeriesLayout(item).lineY"
+              :y1="segment.y1"
               :x2="segment.x2"
-              :y2="getSeriesLayout(item).lineY"
+              :y2="segment.y2"
               stroke="#555"
               stroke-width="2"
             />
@@ -144,7 +145,11 @@
       @click.stop
       @contextmenu.prevent
     >
-      <button type="button" @click="onEditItem">编辑</button>
+      <button
+        v-if="contextMenu.targetType === 'item'"
+        type="button"
+        @click="onEditItem"
+      >编辑</button>
       <button type="button" @click="onCopyItem">复制</button>
       <button type="button" class="danger" @click="onDeleteItem">删除</button>
     </div>
@@ -164,6 +169,11 @@ const SERIES_CONTAINER_HEIGHT = 50;
 const SERIES_HORIZONTAL_GAP = 75; // adjusted spacing for shorter connectors
 const SERIES_MARGIN_X = 20;
 const SERIES_MARGIN_Y = 30;
+const SERIES_MAX_COLUMNS = 4;
+const SERIES_VERTICAL_GAP = 60;
+const AUTO_LAYOUT_MAX_PER_ROW = 4;
+const AUTO_LAYOUT_GAP_X = 20;
+const AUTO_LAYOUT_GAP_Y = 100;
 
 const createComponentInstance = (component, slot) => {
   const uniqueId = `${component.id || 'component'}-${componentInstanceCounter++}`;
@@ -176,27 +186,57 @@ function getSeriesLayout(item) {
   const containerCount = Math.max(1, item.containers ?? 2);
   const containerWidth = SERIES_CONTAINER_WIDTH;
   const containerHeight = SERIES_CONTAINER_HEIGHT;
-  const width = SERIES_MARGIN_X * 2 + containerCount * containerWidth + (containerCount - 1) * SERIES_HORIZONTAL_GAP;
-  const height = SERIES_MARGIN_Y * 2 + containerHeight;
-  const top = SERIES_MARGIN_Y;
-  const positions = Array.from({ length: containerCount }, (_, idx) => SERIES_MARGIN_X + idx * (containerWidth + SERIES_HORIZONTAL_GAP));
-  const lineY = top + containerHeight / 2;
+  const columns = Math.min(containerCount, SERIES_MAX_COLUMNS);
+  const rows = Math.ceil(containerCount / SERIES_MAX_COLUMNS);
+  const width = SERIES_MARGIN_X * 2 + columns * containerWidth + (columns - 1) * SERIES_HORIZONTAL_GAP;
+  const height = SERIES_MARGIN_Y * 2 + rows * containerHeight + Math.max(0, rows - 1) * SERIES_VERTICAL_GAP;
+
+  const positions = Array.from({ length: containerCount }, (_, idx) => {
+    const row = Math.floor(idx / SERIES_MAX_COLUMNS);
+    const column = idx % SERIES_MAX_COLUMNS;
+    const left = SERIES_MARGIN_X + column * (containerWidth + SERIES_HORIZONTAL_GAP);
+    const top = SERIES_MARGIN_Y + row * (containerHeight + SERIES_VERTICAL_GAP);
+    const right = left + containerWidth;
+    const centerY = top + containerHeight / 2;
+    return { row, column, left, top, right, centerY };
+  });
+
   const segments = [];
-  if (containerCount > 0) {
-    const firstLeft = positions[0];
-    if (firstLeft > 0) {
-      segments.push({ x1: 0, x2: firstLeft });
-    }
-    for (let i = 0; i < containerCount; i += 1) {
-      const left = positions[i];
-      const right = left + containerWidth;
-      const nextLeft = i === containerCount - 1 ? width : positions[i + 1];
-      if (right < nextLeft) {
-        segments.push({ x1: right, x2: nextLeft });
+  if (positions.length > 0) {
+    const first = positions[0];
+    segments.push({ x1: 0, y1: first.centerY, x2: first.left, y2: first.centerY });
+
+    for (let i = 0; i < positions.length; i += 1) {
+      const current = positions[i];
+      const next = positions[i + 1];
+
+      if (next && next.row === current.row) {
+        segments.push({ x1: current.right, y1: current.centerY, x2: next.left, y2: current.centerY });
+      } else if (next) {
+        // Route the connector around the right margin before entering the next row.
+        segments.push({ x1: current.right, y1: current.centerY, x2: width, y2: current.centerY });
+        segments.push({ x1: width, y1: current.centerY, x2: width, y2: next.centerY });
+        segments.push({ x1: width, y1: next.centerY, x2: next.left, y2: next.centerY });
+      } else {
+        segments.push({ x1: current.right, y1: current.centerY, x2: width, y2: current.centerY });
       }
     }
   }
-  return { containerCount, containerWidth, containerHeight, width, height, positions, top, lineY, segments };
+
+  const entryY = positions.length ? positions[0].centerY : SERIES_MARGIN_Y + containerHeight / 2;
+  const exitY = positions.length ? positions[positions.length - 1].centerY : entryY;
+
+  return {
+    containerCount,
+    containerWidth,
+    containerHeight,
+    width,
+    height,
+    positions,
+    entryY,
+    exitY,
+    segments
+  };
 }
 
 function getSeriesContainerBounds(item) {
@@ -209,11 +249,12 @@ function getSeriesContainerBounds(item) {
 
 function getSeriesContainerStyle(item, index) {
   const layout = getSeriesLayout(item);
+  const position = layout.positions[index] || { left: SERIES_MARGIN_X, top: SERIES_MARGIN_Y };
   return {
     width: `${layout.containerWidth}px`,
     height: `${layout.containerHeight}px`,
-    left: `${layout.positions[index]}px`,
-    top: `${layout.top}px`
+    left: `${position.left}px`,
+    top: `${position.top}px`
   };
 }
 
@@ -231,7 +272,7 @@ const potentialSnap = ref(null); // { draggedItem, draggedConnectorType, staticI
 const SNAP_THRESHOLD = 20;
 const hoveredGroup = ref(null); // { ids:[], bbox }
 const groupDrag = ref({ active: false, offset: {x:0,y:0}, startMouse: {x:0,y:0}, startPositions: {} });
-const contextMenu = ref({ visible: false, x: 0, y: 0, itemId: null });
+const contextMenu = ref({ visible: false, x: 0, y: 0, targetType: null, itemId: null, groupIds: [] });
 
 // --- Drag and Drop for NEW items from Palette ---
 const onCanvasDrop = (event) => {
@@ -310,7 +351,9 @@ defineExpose({ onCanvasDrop });
 
 const hideContextMenu = () => {
   contextMenu.value.visible = false;
+  contextMenu.value.targetType = null;
   contextMenu.value.itemId = null;
+  contextMenu.value.groupIds = [];
 };
 
 const onCanvasContextMenu = (event) => {
@@ -328,12 +371,34 @@ const onItemContextMenu = (item, event) => {
   const rect = canvasEl.getBoundingClientRect();
   contextMenu.value.x = event.clientX - rect.left;
   contextMenu.value.y = event.clientY - rect.top;
+  contextMenu.value.targetType = 'item';
   contextMenu.value.itemId = item.id;
+  contextMenu.value.groupIds = [];
+  contextMenu.value.visible = true;
+};
+
+const onGroupContextMenu = (event) => {
+  const group = hoveredGroup.value;
+  if (!group || !Array.isArray(group.ids) || group.ids.length === 0) {
+    hideContextMenu();
+    return;
+  }
+  const canvasEl = event.currentTarget.closest('.modeling-canvas');
+  if (!canvasEl) {
+    hideContextMenu();
+    return;
+  }
+  const rect = canvasEl.getBoundingClientRect();
+  contextMenu.value.x = event.clientX - rect.left;
+  contextMenu.value.y = event.clientY - rect.top;
+  contextMenu.value.targetType = 'group';
+  contextMenu.value.itemId = null;
+  contextMenu.value.groupIds = [...group.ids];
   contextMenu.value.visible = true;
 };
 
 const getContextMenuItem = () => {
-  if (!contextMenu.value.itemId) return null;
+  if (contextMenu.value.targetType !== 'item' || !contextMenu.value.itemId) return null;
   return items.value.find(i => i.id === contextMenu.value.itemId) || null;
 };
 
@@ -374,6 +439,61 @@ const cloneItem = (item) => {
   }
 
   return base;
+};
+
+const deleteGroupItems = (groupIds) => {
+  const uniqueIds = new Set(groupIds);
+  if (uniqueIds.size === 0) return;
+  uniqueIds.forEach(id => removeItemConnections(id));
+  items.value = items.value.filter(item => !uniqueIds.has(item.id));
+  if (hoveredGroup.value && hoveredGroup.value.ids.some(id => uniqueIds.has(id))) {
+    hoveredGroup.value = null;
+  }
+};
+
+const copyGroupItems = (groupIds) => {
+  const uniqueIds = Array.from(new Set(groupIds));
+  if (uniqueIds.length === 0) return;
+
+  const cloneMap = new Map();
+  const clones = [];
+
+  uniqueIds.forEach(id => {
+    const item = items.value.find(i => i.id === id);
+    if (!item) return;
+    const clone = cloneItem(item);
+    clones.push(clone);
+    cloneMap.set(id, clone.id);
+  });
+
+  if (!clones.length) return;
+
+  clones.forEach(clone => items.value.push(clone));
+
+  nextTick(() => {
+    clones.forEach(clone => updateItemConnectors(clone.id));
+
+    const newConnections = [];
+    connections.value.forEach(conn => {
+      const fromCloneId = cloneMap.get(conn.from.id);
+      const toCloneId = cloneMap.get(conn.to.id);
+      if (fromCloneId && toCloneId) {
+        newConnections.push({
+          from: { id: fromCloneId, type: conn.from.type },
+          to: { id: toCloneId, type: conn.to.type }
+        });
+      }
+    });
+
+    newConnections.forEach(conn => {
+      const fromItem = items.value.find(i => i.id === conn.from.id);
+      const toItem = items.value.find(i => i.id === conn.to.id);
+      if (!fromItem || !toItem) return;
+      connections.value.push(conn);
+      fromItem.connectors[conn.from.type].snapped = true;
+      toItem.connectors[conn.to.type].snapped = true;
+    });
+  });
 };
 
 function getSeriesSlotComponents(item, slotIndex) {
@@ -417,6 +537,13 @@ function adjustSeriesContainerCount(item, desired) {
 }
 
 const onDeleteItem = () => {
+  if (contextMenu.value.targetType === 'group') {
+    const groupIds = contextMenu.value.groupIds || [];
+    hideContextMenu();
+    deleteGroupItems(groupIds);
+    return;
+  }
+
   const item = getContextMenuItem();
   if (!item) return;
   hideContextMenu();
@@ -428,6 +555,13 @@ const onDeleteItem = () => {
 };
 
 const onCopyItem = () => {
+  if (contextMenu.value.targetType === 'group') {
+    const groupIds = contextMenu.value.groupIds || [];
+    hideContextMenu();
+    copyGroupItems(groupIds);
+    return;
+  }
+
   const source = getContextMenuItem();
   if (!source) return;
   hideContextMenu();
@@ -437,6 +571,10 @@ const onCopyItem = () => {
 };
 
 const onEditItem = () => {
+  if (contextMenu.value.targetType !== 'item') {
+    hideContextMenu();
+    return;
+  }
   const item = getContextMenuItem();
   if (!item) return;
   hideContextMenu();
@@ -502,8 +640,8 @@ const onItemMouseDown = (item, event) => {
   }
 
   hideContextMenu();
+  clearAutoLayout(getGroupIdsForItem(item.id));
   // Disconnect the item being dragged
-  const connectionsToRemove = [];
   connections.value = connections.value.filter(conn => {
     if (conn.from.id === item.id || conn.to.id === item.id) {
       const fromItem = items.value.find(i => i.id === conn.from.id);
@@ -663,6 +801,7 @@ const onCanvasMouseUp = () => {
       connections.value.push({ from, to });
       fromItem.connectors[from.type].snapped = true;
       toItem.connectors[to.type].snapped = true;
+      autoLayoutGroupForItem(from.id);
     }
   }
 
@@ -769,6 +908,130 @@ function onGroupMouseDown(event) {
   });
 }
 
+function getGroupIdsForItem(itemId) {
+  const groups = buildGroups();
+  const group = groups.find(g => g.ids.includes(itemId));
+  if (group) return [...group.ids];
+  return [itemId];
+}
+
+function clearAutoLayout(ids) {
+  ids.forEach(id => {
+    const item = items.value.find(i => i.id === id);
+    if (item) {
+      item.autoLayout = null;
+    }
+  });
+}
+
+function orderGroupIdsLinear(groupIds) {
+  if (groupIds.length <= 1) return [...groupIds];
+  const idSet = new Set(groupIds);
+  const adjacency = new Map();
+  groupIds.forEach(id => adjacency.set(id, new Set()));
+
+  connections.value.forEach(conn => {
+    const a = conn.from.id;
+    const b = conn.to.id;
+    if (!idSet.has(a) || !idSet.has(b)) return;
+    adjacency.get(a).add(b);
+    adjacency.get(b).add(a);
+  });
+
+  const endpointIds = groupIds.filter(id => (adjacency.get(id)?.size ?? 0) === 1);
+  if (groupIds.length > 2 && endpointIds.length !== 2) {
+    return null;
+  }
+
+  let startId;
+  if (endpointIds.length >= 1) {
+    startId = endpointIds.reduce((best, candidate) => {
+      const candidateItem = items.value.find(i => i.id === candidate);
+      const bestItem = items.value.find(i => i.id === best);
+      const candidateLeft = candidateItem ? parseFloat(candidateItem.style.left) || 0 : 0;
+      const bestLeft = bestItem ? parseFloat(bestItem.style.left) || 0 : 0;
+      return candidateLeft < bestLeft ? candidate : best;
+    });
+  } else {
+    // Fallback to the leftmost item when only two nodes or no clear endpoints
+    startId = groupIds.reduce((best, candidate) => {
+      const candidateItem = items.value.find(i => i.id === candidate);
+      const bestItem = items.value.find(i => i.id === best);
+      const candidateLeft = candidateItem ? parseFloat(candidateItem.style.left) || 0 : 0;
+      const bestLeft = bestItem ? parseFloat(bestItem.style.left) || 0 : 0;
+      return candidateLeft < bestLeft ? candidate : best;
+    });
+  }
+
+  const ordered = [];
+  const visited = new Set();
+  let current = startId;
+  let previous = null;
+
+  while (current) {
+    ordered.push(current);
+    visited.add(current);
+    const neighbors = Array.from(adjacency.get(current) || []);
+    const next = neighbors.find(id => id !== previous && !visited.has(id));
+    if (!next) break;
+    previous = current;
+    current = next;
+  }
+
+  if (ordered.length !== groupIds.length) {
+    return null;
+  }
+
+  return ordered;
+}
+
+function autoLayoutGroupForItem(itemId) {
+  const groupIds = getGroupIdsForItem(itemId);
+  if (groupIds.length <= 1) return;
+
+  clearAutoLayout(groupIds);
+  const orderedIds = orderGroupIdsLinear(groupIds);
+  if (!orderedIds) {
+    return;
+  }
+
+  const groupItems = orderedIds.map(id => items.value.find(i => i.id === id)).filter(Boolean);
+  if (groupItems.length !== orderedIds.length) return;
+
+  const lefts = groupItems.map(item => parseFloat(item.style.left) || 0);
+  const tops = groupItems.map(item => parseFloat(item.style.top) || 0);
+  const baseLeft = Math.min(...lefts);
+  const baseTop = Math.min(...tops);
+
+  const dimensions = groupItems.map(item => getItemDimensions(item));
+  const maxHeight = Math.max(...dimensions.map(d => d.height));
+
+  const rowOffsets = new Map();
+  orderedIds.forEach((id, index) => {
+    const item = items.value.find(i => i.id === id);
+    if (!item) return;
+    const row = Math.floor(index / AUTO_LAYOUT_MAX_PER_ROW);
+    const column = index % AUTO_LAYOUT_MAX_PER_ROW;
+    const itemDims = getItemDimensions(item);
+    if (!rowOffsets.has(row)) {
+      rowOffsets.set(row, baseLeft);
+    }
+    const currentLeft = rowOffsets.get(row);
+    const left = currentLeft;
+    rowOffsets.set(row, currentLeft + itemDims.width + AUTO_LAYOUT_GAP_X);
+    const targetRowCenter = baseTop + (maxHeight / 2) + row * (maxHeight + AUTO_LAYOUT_GAP_Y);
+    const top = targetRowCenter - itemDims.inY;
+    item.style.left = `${left}px`;
+    item.style.top = `${top}px`;
+    item.autoLayout = { row, column };
+    updateItemConnectors(item.id);
+  });
+
+  if (hoveredGroup.value && hoveredGroup.value.ids.some(id => groupIds.includes(id))) {
+    updateHoveredGroupBBox();
+  }
+}
+
 
 // --- Connector and Connection Line Logic ---
 const getItemDimensions = (item) => {
@@ -782,8 +1045,8 @@ const getItemDimensions = (item) => {
     const layout = getSeriesLayout(item);
     width = layout.width;
     height = layout.height;
-    inY = layout.lineY;
-    outY = layout.lineY;
+    inY = layout.entryY;
+    outY = layout.exitY;
   }
   return { width, height, inY, outY };
 };
@@ -823,6 +1086,29 @@ const connectionPaths = computed(() => {
     // Do not draw line if snapped (endpoints overlap)
     const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
     if (dist < 1) return '';
+
+    const fromLayout = fromItem.autoLayout;
+    const toLayout = toItem.autoLayout;
+    const hasLayoutRows = fromLayout && toLayout && typeof fromLayout.row === 'number' && typeof toLayout.row === 'number';
+
+    if (hasLayoutRows && fromLayout.row !== toLayout.row) {
+      const upperIsFrom = fromLayout.row < toLayout.row;
+      const upperItem = upperIsFrom ? fromItem : toItem;
+      const lowerItem = upperIsFrom ? toItem : fromItem;
+      const upperDims = getItemDimensions(upperItem);
+      const upperTop = parseFloat(upperItem.style.top) || 0;
+      const lowerTop = parseFloat(lowerItem.style.top) || 0;
+      const upperBottom = upperTop + upperDims.height;
+      let safeY = (upperBottom + lowerTop) / 2;
+      const minGap = 20;
+      if (safeY - upperBottom < minGap / 2) {
+        safeY = upperBottom + minGap / 2;
+      }
+      if (lowerTop - safeY < minGap / 2) {
+        safeY = lowerTop - minGap / 2;
+      }
+      return `M ${p1.x} ${p1.y} L ${p1.x} ${safeY} L ${p2.x} ${safeY} L ${p2.x} ${p2.y}`;
+    }
 
     return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
   });

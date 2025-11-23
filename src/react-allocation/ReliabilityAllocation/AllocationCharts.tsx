@@ -43,7 +43,7 @@ export const AllocationCharts: React.FC<AllocationChartsProps> = ({ mode }) => {
       const chart = echarts.getInstanceByDom(barRef.current) || echarts.init(barRef.current);
       chart.setOption({
         tooltip: { trigger: 'axis' },
-        title: { text: '单元分配 MTBF', left: 'center', top: 5, textStyle: { fontSize: 12 } },
+        title: { text: 'LRU分配 MTBF', left: 'center', top: 5, textStyle: { fontSize: 12 } },
         xAxis: { type: 'category', data: unitResults.map(u => u.name), axisLabel: { rotate: 25 } },
         yAxis: { type: 'value', name: 'MTBF(h)' },
         series: [{ type: 'bar', data: unitResults.map(u => Number(u.allocatedMTBF.toFixed(2))), itemStyle: { color: '#4a90e2' } }]
@@ -140,7 +140,7 @@ export const AllocationCharts: React.FC<AllocationChartsProps> = ({ mode }) => {
       {mode === 'system' && <div ref={pieRef} key={'pie-' + systemResults.map(s=>s.id).join(',')} style={{ height: 300, background: '#fff', border: '1px solid #eee', borderRadius: 6 }} />}
       {mode === 'unit' && (
         unitResults.length === 0
-          ? <div style={{ height: 300, background: '#fff', border: '1px solid #eee', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontSize: 14 }}>暂无单元分配数据，请先添加单元</div>
+          ? <div style={{ height: 300, background: '#fff', border: '1px solid #eee', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontSize: 14 }}>暂无LRU分配数据，请先添加LRU</div>
           : <div ref={barRef} key={'bar-' + unitResults.map(u=>u.id).join(',')} style={{ height: 300, background: '#fff', border: '1px solid #eee', borderRadius: 6 }} />
       )}
       {/* 树图容器：禁止横向滚动，宽度100%自适应，内容需通过label自适应缩放显示 */}
@@ -148,7 +148,7 @@ export const AllocationCharts: React.FC<AllocationChartsProps> = ({ mode }) => {
         <div ref={treeRef} key={'tree-' + systemResults.map(s=>s.id).join(',') + '-' + unitResults.map(u=>u.id).join(',')} style={{ width: '100%', height: 320 }}>
           {mode === 'unit' && unitResults.length === 0 && (
             <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, color:'#666' }}>
-              请选择一个系统以查看单元分配层级。
+              请选择一个系统以查看LRU分配层级。
             </div>
           )}
         </div>

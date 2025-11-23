@@ -1,30 +1,79 @@
 <template>
-  <div class="component-palette">
-    <h3>组件区</h3>
-    <div class="import-bar">
-      <button type="button" @click="triggerImport">导入 Excel</button>
-      <button type="button" class="linklike" @click="downloadTemplate">下载模板</button>
-      <input
-        ref="fileInput"
-        class="sr-only"
-        type="file"
-        accept=".xlsx,.xls,.csv"
-        @change="onFileSelected"
-      />
-    </div>
-    <div
-      v-for="component in components"
-      :key="component.id"
-      class="component-item"
-      draggable="true"
-      @dragstart="onComponentDragStart(component, $event)"
-    >
-      {{ component.name }}
-    </div>
-    <h3>模型区</h3>
-    <div class="model-item" draggable="true" @dragstart="onModelDragStart('series', $event)">串联模型</div>
-    <div class="model-item" draggable="true" @dragstart="onModelDragStart('parallel', $event)">并联模型</div>
-    <div class="model-item" draggable="true" @dragstart="onModelDragStart('redundancy', $event)">冗余模型</div>
+  <div class="palette-layout">
+    <section class="palette-card">
+      <header class="card-title">组件区</header>
+      <div class="card-body">
+        <div
+          v-for="component in components"
+          :key="component.id"
+          class="palette-chip"
+          draggable="true"
+          @dragstart="onComponentDragStart(component, $event)"
+        >
+          {{ component.name }}
+        </div>
+      </div>
+      <div class="card-body actions-body component-actions">
+        <button type="button" @click="triggerImport">导入 Excel</button>
+        <button type="button" class="linklike" @click="downloadTemplate">下载模板</button>
+        <input
+          ref="fileInput"
+          class="sr-only"
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          @change="onFileSelected"
+        />
+      </div>
+    </section>
+    <section class="palette-card">
+      <header class="card-title">模型区</header>
+      <div class="card-body model-icons">
+        <div class="palette-icon" draggable="true" @dragstart="onModelDragStart('series', $event)" title="串联模型">
+          <svg width="68" height="36" viewBox="0 0 120 60">
+            <line x1="10" y1="30" x2="110" y2="30" stroke="#444" stroke-width="4" stroke-linecap="round" />
+            <rect x="24" y="18" width="28" height="24" rx="3" ry="3" fill="#fff" stroke="#444" stroke-width="3" />
+            <rect x="68" y="18" width="28" height="24" rx="3" ry="3" fill="#fff" stroke="#444" stroke-width="3" />
+          </svg>
+        </div>
+        <div class="palette-icon" draggable="true" @dragstart="onModelDragStart('parallel', $event)" title="并联模型">
+          <svg width="68" height="36" viewBox="0 0 120 60">
+            <line x1="8" y1="30" x2="36" y2="30" stroke="#444" stroke-width="3" stroke-linecap="round" />
+            <line x1="88" y1="30" x2="112" y2="30" stroke="#444" stroke-width="3" stroke-linecap="round" />
+            <line x1="36" y1="18" x2="36" y2="42" stroke="#444" stroke-width="3" />
+            <line x1="88" y1="18" x2="88" y2="42" stroke="#444" stroke-width="3" />
+            <line x1="36" y1="18" x2="88" y2="18" stroke="#444" stroke-width="3" />
+            <line x1="36" y1="42" x2="88" y2="42" stroke="#444" stroke-width="3" />
+            <rect x="48" y="10" width="26" height="16" rx="3" ry="3" fill="#fff" stroke="#444" stroke-width="2" />
+            <rect x="48" y="34" width="26" height="16" rx="3" ry="3" fill="#fff" stroke="#444" stroke-width="2" />
+          </svg>
+        </div>
+        <div class="palette-icon" draggable="true" @dragstart="onModelDragStart('redundancy', $event)" title="冗余模型">
+          <svg width="68" height="36" viewBox="0 0 160 60">
+            <line x1="14" y1="30" x2="40" y2="30" stroke="#444" stroke-width="3" stroke-linecap="round" />
+            <line x1="118" y1="30" x2="146" y2="30" stroke="#444" stroke-width="3" stroke-linecap="round" />
+            <line x1="40" y1="30" x2="60" y2="16" stroke="#444" stroke-width="3" stroke-linecap="round" />
+            <line x1="40" y1="30" x2="60" y2="44" stroke="#444" stroke-width="3" stroke-linecap="round" />
+            <rect x="60" y="12" width="28" height="16" rx="3" ry="3" fill="#fff" stroke="#444" stroke-width="2" stroke-dasharray="4 3" />
+            <rect x="60" y="32" width="28" height="16" rx="3" ry="3" fill="#fff" stroke="#444" stroke-width="2" stroke-dasharray="4 3" />
+            <line x1="88" y1="20" x2="108" y2="30" stroke="#444" stroke-width="3" stroke-linecap="round" />
+            <line x1="88" y1="40" x2="108" y2="30" stroke="#444" stroke-width="3" stroke-linecap="round" />
+            <circle cx="118" cy="30" r="12" fill="#fff" stroke="#444" stroke-width="3" />
+            <text x="118" y="34" font-size="10" text-anchor="middle" fill="#444" font-weight="600">2/4</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+    <section class="palette-card properties-card">
+      <header class="card-title">属性区</header>
+      <div class="card-body properties-body">
+        <p class="placeholder">请选择画布中的模型或组件查看详细属性。</p>
+        <ul class="placeholder-list">
+          <li>名称</li>
+          <li>类型</li>
+          <li>可靠度/参数</li>
+        </ul>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -163,36 +212,125 @@ const onFileSelected = async (changeEvent) => {
 </script>
 
 <style scoped>
-.component-palette {
-  padding: 10px;
-}
-.import-bar {
+.palette-layout {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+  color: #2f3b4a;
 }
-.import-bar button {
-  padding: 6px 12px;
-  line-height: 1.4;
-  border: 1px solid #bbb;
-  background-color: #f5f5f5;
-  cursor: pointer;
-  border-radius: 4px;
+.palette-card {
+  flex: 1 1 200px;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+.card-title {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #30445a;
+}
+.card-body {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.card-body.model-icons {
+  justify-content: flex-start;
+  gap: 12px;
+}
+.palette-chip {
+  padding: 6px 14px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 999px;
+  background: #fff;
+  cursor: grab;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
   font-size: 13px;
 }
-.import-bar button.linklike {
-  background: none;
+.palette-chip:hover {
+  background-color: #edf3ff;
+  border-color: rgba(0,0,0,0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+}
+.palette-icon {
+  width: 68px;
+  height: 40px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(245,245,245,0.9));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.palette-icon:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0,0,0,0.2);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+  background: #edf3ff;
+}
+.actions-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.component-actions {
+  align-items: stretch;
+  border-top: 1px solid rgba(0,0,0,0.05);
+  margin-top: 8px;
+  padding-top: 10px;
+}
+.properties-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #4a5568;
+}
+.properties-body .placeholder {
+  margin: 0;
+  color: #6b7280;
+}
+.properties-body .placeholder-list {
+  margin: 0;
+  padding-left: 16px;
+  list-style: disc;
+  color: #4a5568;
+}
+.actions-body button {
+  padding: 6px 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  font-size: 13px;
+  color: #333;
+}
+.actions-body button:hover {
+  background: #edf3ff;
+  border-color: rgba(0,0,0,0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.actions-body button.linklike {
+  background: transparent;
   border: none;
   color: #0b6efd;
   padding: 0;
+  text-align: left;
 }
-.import-bar button.linklike:hover {
+.actions-body button.linklike:hover {
   text-decoration: underline;
-  background: none;
-}
-.import-bar button:hover {
-  background-color: #e8e8e8;
+  box-shadow: none;
 }
 .sr-only {
   position: absolute;
@@ -204,11 +342,16 @@ const onFileSelected = async (changeEvent) => {
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
-.component-item, .model-item {
-  padding: 8px;
-  margin-bottom: 5px;
-  border: 1px solid #ccc;
-  cursor: grab;
-  text-align: center;
+
+@media (max-width: 920px) {
+  .palette-layout {
+    gap: 12px;
+  }
+  .palette-card {
+    flex: 1 1 100%;
+  }
+  .card-body {
+    justify-content: flex-start;
+  }
 }
 </style>
