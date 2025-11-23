@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <div class="hero-section">
-  <h2>可靠性分析平台</h2>
+  <h2>复杂装备可靠性分析与评估系统</h2>
   <p>基于Vue3构建的专业可靠性预计与分配工具</p>
       <button @click="$router.push('/calculator')" class="start-btn">
         开始分析
