@@ -1,12 +1,13 @@
 <template>
   <div id="app">
     <aside class="sidebar">
-  <h2>可靠性分析软件</h2>
+  <h2>复杂装备可靠性分析与评估系统</h2>
       <nav class="sidebar-links">
     <router-link to="/">首页</router-link>
     <router-link to="/modeling">可靠性建模</router-link>
   <router-link to="/calculator">可靠性预计</router-link>
   <router-link to="/allocation">可靠性分配</router-link>
+  <router-link to="/fault-tree">故障树分析</router-link>
       </nav>
     </aside>
     <main class="main-content">

@@ -1,4 +1,4 @@
-// 类型定义：系统级与单元级可靠性分配
+// 类型定义：系统级与LRU级可靠性分配
 export interface SystemInputRow {
   id: string;
   name: string;
@@ -20,7 +20,7 @@ export interface UnitInputRow {
 }
 
 export interface UnitAllocationResult extends UnitInputRow {
-  k: number;                 // 单元分配系数
+  k: number;                 // LRU分配系数
   allocatedMTBF: number;     // 分配 MTBF (h)
   allocatedFailureRate: number; // 分配故障率 (1/h)
 }
@@ -33,7 +33,7 @@ export interface AllocationParams {
 
 export interface AllocationPersistShape {
   systems: SystemInputRow[];
-  units: UnitInputRow[]; // 所有系统的单元
+  units: UnitInputRow[]; // 所有系统的LRU
   params: AllocationParams;
 }
 

@@ -11,7 +11,7 @@ const TabsInner: React.FC = () => {
     <div className='allocation-root-react'>
       <div className='tab-bar'>
   <button className={tab === 'system' ? 'active' : ''} onClick={() => setTab('system')}>系统级分配</button>
-  <button className={tab === 'unit' ? 'active' : ''} onClick={() => setTab('unit')}>单元级分配</button>
+  <button className={tab === 'unit' ? 'active' : ''} onClick={() => setTab('unit')}>LRU级分配</button>
         <div style={{ flex: 1 }} />
         <button onClick={exportAll} className='export-btn'>导出结果</button>
       </div>

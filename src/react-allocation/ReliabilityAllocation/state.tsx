@@ -108,23 +108,24 @@ export function AllocationProvider({ children }: { children: React.ReactNode }) 
   }, [state.systems, state.units, state.params]);
 
   const systemResults: SystemAllocationResult[] = useMemo(() => {
-    const margin = state.params.margin || 1;
-  const total = state.systems.reduce((acc: number, s: SystemInputRow) => acc + (s.estFailureRate || 0), 0);
-  return state.systems.map((s: SystemInputRow) => {
+    const margin = state.params.margin && state.params.margin > 0 ? state.params.margin : defaultParams.margin;
+    const taskMTBF = state.params.taskMTBF && state.params.taskMTBF > 0 ? state.params.taskMTBF : defaultParams.taskMTBF;
+    const total = state.systems.reduce((acc: number, s: SystemInputRow) => acc + (s.estFailureRate || 0), 0);
+    return state.systems.map((s: SystemInputRow) => {
       const rate = s.estFailureRate || 0;
       const k = total > 0 && rate > 0 ? rate / total : 0;
-      const allocatedMTBF = k > 0 ? state.params.taskMTBF / k / margin : 0;
+      const allocatedMTBF = k > 0 ? taskMTBF / k / margin : 0;
       const allocatedFailureRate = allocatedMTBF > 0 ? 1 / allocatedMTBF : 0;
       return { ...s, k, allocatedMTBF, allocatedFailureRate };
     });
   }, [state.systems, state.params.taskMTBF, state.params.margin]);
 
-  // 计算单个系统的单元分配结果
+  // 计算单个系统的LRU分配结果
   function computeUnitAllocationsForSystem(sys: SystemAllocationResult): UnitAllocationResult[] {
-    const margin = state.params.margin || 1;
-  const units = state.units.filter((u: UnitAllocationResult | any) => u.systemId === sys.id);
-  const total = units.reduce((acc: number, u: UnitInputRow | any) => acc + (u.estFailureRate || 0) * (u.quantity || 0), 0);
-  return units.map((u: UnitInputRow | any) => {
+    const margin = state.params.margin && state.params.margin > 0 ? state.params.margin : defaultParams.margin;
+    const units = state.units.filter((u: UnitAllocationResult | any) => u.systemId === sys.id);
+    const total = units.reduce((acc: number, u: UnitInputRow | any) => acc + (u.estFailureRate || 0) * (u.quantity || 0), 0);
+    return units.map((u: UnitInputRow | any) => {
       const fr = (u.estFailureRate || 0) * (u.quantity || 0);
       const k = total > 0 && fr > 0 ? fr / total : 0;
       const allocatedMTBF = k > 0 ? (sys.allocatedMTBF / k / margin) * (u.quantity || 0) : 0;
@@ -171,6 +172,12 @@ export function AllocationProvider({ children }: { children: React.ReactNode }) 
   }, [systemResults, state.units, state.params.margin]);
 
   const exportAll = () => {
+    // 校验系统级数据
+    const allZeroOrEmpty = systemResults.every(r => !r.estFailureRate || Number(r.estFailureRate) === 0);
+    if (allZeroOrEmpty) {
+      alert('请先导入系统级数据并填写预计故障率后再导出！');
+      return;
+    }
     import('xlsx').then(xlsx => {
       const sysSheetData = [
         ['系统名称', '预计故障率(1/h)', '分配系数k', '分配MTBF(h)', '分配故障率(1/h)'],
@@ -181,7 +188,7 @@ export function AllocationProvider({ children }: { children: React.ReactNode }) 
       xlsx.utils.book_append_sheet(wb, ws1, '系统分配');
 
       const allUnits: any[][] = [
-        ['所属系统', '单元名称', '数量', '预计故障率', '分配系数', '分配MTBF', '分配故障率']
+        ['所属系统', 'LRU名称', '数量', '预计故障率', '分配系数', '分配MTBF', '分配故障率']
       ];
       systemResults.forEach(sys => {
         const computedUnits = computeUnitAllocationsForSystem(sys);
@@ -198,7 +205,7 @@ export function AllocationProvider({ children }: { children: React.ReactNode }) 
         });
       });
       const ws2 = xlsx.utils.aoa_to_sheet(allUnits);
-      xlsx.utils.book_append_sheet(wb, ws2, '单元分配');
+      xlsx.utils.book_append_sheet(wb, ws2, 'LRU分配');
       xlsx.writeFile(wb, '可靠性分配结果.xlsx');
     });
   };
