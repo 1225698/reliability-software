@@ -181,6 +181,8 @@ const items = ref([]);
 const connections = ref([]);
 let idCounter = 0;
 let componentInstanceCounter = 0;
+const STORAGE_KEY = 'modeling-canvas-state-v1';
+let restoringState = false;
 
 const SERIES_CONTAINER_HEIGHT = 50;
 const SERIES_HORIZONTAL_GAP = 75; // adjusted spacing for shorter connectors
@@ -254,6 +256,37 @@ const createComponentInstance = (component, slot) => {
   if (slot !== undefined) instance.slot = slot;
   return instance;
 };
+
+function ensureItemDefaults(item) {
+  if (!item || item.type !== 'model') return;
+  if (!item.style) {
+    item.style = {
+      position: 'absolute',
+      left: item.styleLeft || '0px',
+      top: item.styleTop || '0px',
+      zIndex: 1,
+    };
+  }
+  if (!item.connectors || !item.connectors.in || !item.connectors.out) {
+    item.connectors = {
+      in: { x: 0, y: 0, snapped: false },
+      out: { x: 0, y: 0, snapped: false },
+    };
+  }
+  if (item.modelType === 'parallel' && !Array.isArray(item.branches)) {
+    item.branches = [{ components: [] }, { components: [] }];
+  }
+  if (item.modelType === 'series' && typeof item.containers !== 'number') {
+    item.containers = 2;
+  }
+  if (item.modelType === 'redundancy') {
+    if (typeof item.k !== 'number') item.k = 2;
+    if (typeof item.n !== 'number') item.n = 4;
+    if (!Array.isArray(item.branches) || item.branches.length === 0) {
+      item.branches = Array.from({ length: item.n }, () => ({ components: [] }));
+    }
+  }
+}
 
 function getSeriesLayout(item) {
   const containerCount = Math.max(1, item.containers ?? 2);
@@ -706,9 +739,34 @@ const handleWindowKey = (event) => {
   if (event.key === 'Escape') hideContextMenu();
 };
 
+const restoreState = () => {
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw);
+    restoringState = true;
+    const restoredItems = Array.isArray(parsed.items) ? parsed.items.map(item => ({ ...item })) : [];
+    restoredItems.forEach(ensureItemDefaults);
+    items.value = restoredItems;
+    connections.value = Array.isArray(parsed.connections) ? parsed.connections : [];
+    if (typeof parsed.idCounter === 'number') idCounter = parsed.idCounter;
+    if (typeof parsed.componentInstanceCounter === 'number') componentInstanceCounter = parsed.componentInstanceCounter;
+    nextTick(() => {
+      items.value.forEach(it => updateItemConnectors(it.id));
+      restoringState = false;
+      persistState();
+    });
+  } catch (error) {
+    restoringState = false;
+    console.error('加载建模画布状态失败:', error);
+  }
+};
+
 onMounted(() => {
   window.addEventListener('click', handleWindowClick);
   window.addEventListener('keydown', handleWindowKey);
+  restoreState();
 });
 
 onBeforeUnmount(() => {
@@ -1156,6 +1214,7 @@ const getItemConnectors = (item, customLeft, customTop) => {
 const updateItemConnectors = (itemId) => {
   const item = items.value.find(i => i.id === itemId);
   if (item) {
+    ensureItemDefaults(item);
     syncItemStyle(item);
     const connectors = getItemConnectors(item);
     item.connectors.in.x = connectors.in.x;
@@ -1289,8 +1348,28 @@ function getRedundancyLayout(item) {
   };
 }
 
+const persistState = () => {
+  if (restoringState || typeof window === 'undefined' || typeof localStorage === 'undefined') return;
+  try {
+    const payload = {
+      items: items.value,
+      connections: connections.value,
+      idCounter,
+      componentInstanceCounter,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch (error) {
+    console.error('保存建模画布状态失败:', error);
+  }
+};
+
 watch(items, () => {
   items.value.forEach(it => updateItemConnectors(it.id));
+  persistState();
+}, { deep: true });
+
+watch(connections, () => {
+  persistState();
 }, { deep: true });
 
 </script>
@@ -1350,16 +1429,16 @@ watch(items, () => {
   align-items: stretch;
 }
 .dropped-component {
-  background-color: lightgreen;
-  padding: 3px 6px;
+  padding: 2px 4px;
   margin-top: 0;
   text-align: center;
-  border-radius: 4px;
-  word-break: break-all;
+  word-break: break-word;
   white-space: normal;
   line-height: 1.25;
   width: 100%;
   align-self: stretch;
+  background: none;
+  border: none;
 }
 
 /* Redundancy Model Styles */
