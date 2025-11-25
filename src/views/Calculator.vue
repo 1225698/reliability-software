@@ -11,105 +11,104 @@
     <!-- 基本可靠性标签页 -->
     <template v-if="showMain">
       <div class="card-section compact-section">
-        <!-- 系统参数和LRU配置合并卡片 -->
-        <div class="card compact-card">
-          <div class="card-title">基本可靠性分析</div>
-          <div class="card-content compact-content">
-            <div class="compact-grid">
-              <!-- 系统参数 -->
-              <div class="compact-param-item">
-                <label>系统名称：</label>
-                <input v-model="systemName" placeholder="系统名称" class="compact-input" />
-              </div>
-              <div class="compact-param-item">
-                <label>任务时间：</label>
-                <div class="input-with-unit compact-input-unit">
-                  <input v-model.number="missionTime" type="number" min="0" class="compact-input" />
-                  <span class="unit">小时</span>
+        <div class="cards-row">
+          <!-- 系统参数和LRU配置合并卡片 -->
+          <div class="card compact-card card-half">
+            <div class="card-title">基本可靠性分析</div>
+            <div class="card-content compact-content">
+              <div class="compact-grid">
+                <!-- 系统参数 -->
+                <div class="compact-param-item">
+                  <label>系统名称：</label>
+                  <input v-model="systemName" placeholder="系统名称" class="compact-input" />
                 </div>
-              </div>
-              
-              <!-- LRU配置 -->
-              <div class="compact-lru-section">
-                <div class="template-generator compact-template">
-                  <button @click="downloadTemplate" class="download-btn compact-btn">
-                    📥 Excel模板
-                  </button>
-                  <p class="template-tip compact-tip">使用模板填写数据确保正确导入</p>
+                <div class="compact-param-item">
+                  <label>任务时间：</label>
+                  <div class="input-with-unit compact-input-unit">
+                    <input v-model.number="missionTime" type="number" min="0" class="compact-input" />
+                    <span class="unit">小时</span>
+                  </div>
                 </div>
+                
+                <!-- LRU配置 -->
+                <div class="compact-lru-section">
+                  <div class="template-generator compact-template">
+                    <button @click="downloadTemplate" class="download-btn compact-btn">
+                      📥 Excel模板
+                    </button>
+                    <p class="template-tip compact-tip">使用模板填写数据确保正确导入</p>
+                  </div>
 
-                <div
-                  class="upload-area compact-upload"
-                  @click="triggerFileInput"
-                  @drop="handleDrop"
-                  @dragover="handleDragOver"
-                  @dragleave="handleDragLeave"
-                >
-                  <input
-                    ref="fileInput"
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    @change="handleFileUpload"
-                    style="display: none"
+                  <div
+                    class="upload-area compact-upload"
+                    @click="triggerFileInput"
+                    @drop="handleDrop"
+                    @dragover="handleDragOver"
+                    @dragleave="handleDragLeave"
                   >
-                  <div class="upload-content compact-upload-content">
-                    <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4c2.svg" alt="Excel" class="compact-upload-icon">
-                    <p class="compact-upload-text">点击或拖拽文件</p>
-                    <small class="compact-upload-hint">支持 .xlsx, .xls, .csv</small>
+                    <input
+                      ref="fileInput"
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      @change="handleFileUpload"
+                      style="display: none"
+                    >
+                    <div class="upload-content compact-upload-content">
+                      <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f4c2.svg" alt="Excel" class="compact-upload-icon">
+                      <p class="compact-upload-text">点击或拖拽文件</p>
+                      <small class="compact-upload-hint">支持 .xlsx, .xls, .csv</small>
+                    </div>
                   </div>
-                </div>
 
-                <!-- LRU列表展示 -->
-                <div v-if="selectedComponents.length > 0" class="components-display compact-components">
-                  <div class="components-summary compact-summary">
-                    <span v-for="(count, type) in componentSummary" :key="type" class="summary-badge compact-badge">
-                      {{ type }}: {{ count }}
-                    </span>
-                  </div>
+                  <!-- LRU列表展示 -->
+                  <div v-if="selectedComponents.length > 0" class="components-display compact-components">
+                    <div class="components-summary compact-summary">
+                      <span v-for="(count, type) in componentSummary" :key="type" class="summary-badge compact-badge">
+                        {{ type }}: {{ count }}
+                      </span>
+                    </div>
 
-                  <div class="components-list compact-list">
-                    <div v-for="(comp, index) in selectedComponents" :key="index" class="component-chip compact-chip">
-                      <span class="chip-main compact-main">{{ comp.type }} × {{ comp.quantity }}</span>
-                      <div class="chip-detail compact-detail">
-                        <label>λ(/h):</label>
-                        <input v-model.number="comp.failureRate" type="number" step="any" class="failure-rate-input compact-failure-input" placeholder="失效率" />
+                    <div class="components-list compact-list">
+                      <div v-for="(comp, index) in selectedComponents" :key="index" class="component-chip compact-chip">
+                        <span class="chip-main compact-main">{{ comp.type }} × {{ comp.quantity }}</span>
+                        <div class="chip-detail compact-detail">
+                          <label>λ(/h):</label>
+                          <input v-model.number="comp.failureRate" type="number" step="any" class="failure-rate-input compact-failure-input" placeholder="失效率" />
+                        </div>
+                        <span class="chip-desc compact-desc">{{ comp.description }}</span>
+                        <button @click="removeComponent(index)" class="remove-btn compact-remove">✕</button>
                       </div>
-                      <span class="chip-desc compact-desc">{{ comp.description }}</span>
-                      <button @click="removeComponent(index)" class="remove-btn compact-remove">✕</button>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- 可靠性结果和操作按钮卡片 -->
-        <div class="card compact-card">
-          <div class="card-title">计算结果</div>
-          <div class="card-content compact-content">
-            <div class="result-row compact-result">
-              <div class="result-box purple compact-box">
-                <div class="result-label compact-label">系统可靠度</div>
-                <div class="result-value compact-value">{{ calculationResults.hasResults ? calculationResults.systemReliability.toFixed(4) : '--' }}</div>
+          <!-- 可靠性结果和操作按钮卡片 -->
+          <div class="card compact-card card-half">
+            <div class="card-title">计算结果</div>
+            <div class="card-content compact-content">
+              <div class="result-row compact-result">
+                <div class="result-box purple compact-box">
+                  <div class="result-label compact-label">系统可靠度</div>
+                  <div class="result-value compact-value">{{ calculationResults.hasResults ? calculationResults.systemReliability.toFixed(4) : '--' }}</div>
+                </div>
+                <div class="result-box pink compact-box">
+                  <div class="result-label compact-label">总失效率</div>
+                  <div class="result-value compact-value">{{ calculationResults.hasResults ? calculationResults.totalFailureRate.toFixed(8) : '--' }}/h</div>
+                </div>
+                <div class="result-box blue compact-box">
+                  <div class="result-label compact-label">MTBF</div>
+                  <div class="result-value compact-value">{{ calculationResults.hasResults ? calculationResults.mtbf.toFixed(2) : '--' }} h</div>
+                </div>
               </div>
-              <div class="result-box pink compact-box">
-                <div class="result-label compact-label">总失效率</div>
-                <div class="result-value compact-value">{{ calculationResults.hasResults ? calculationResults.totalFailureRate.toFixed(8) : '--' }}/h</div>
+              <div class="action-buttons compact-actions">
+                <button @click="calculateReliability" class="calculate-btn compact-action-btn">计算</button>
+                <button @click="saveCurrentSystem" class="save-btn compact-action-btn" :disabled="!calculationResults.hasResults">
+                  保存
+                </button>
               </div>
-              <div class="result-box blue compact-box">
-                <div class="result-label compact-label">MTBF</div>
-                <div class="result-value compact-value">{{ calculationResults.hasResults ? calculationResults.mtbf.toFixed(2) : '--' }} h</div>
-              </div>
-            </div>
-            <div class="action-buttons compact-actions">
-              <button @click="calculateReliability" class="calculate-btn compact-action-btn">计算</button>
-              <button @click="saveCurrentSystem" class="save-btn compact-action-btn" :disabled="!calculationResults.hasResults">
-                保存
-              </button>
-              <button @click="saveAndView" class="save-btn compact-action-btn" :disabled="!calculationResults.hasResults">
-                保存并查看
-              </button>
             </div>
           </div>
         </div>
@@ -1374,6 +1373,17 @@ onMounted(() => {
   max-height: 70vh;
   overflow-y: auto;
   padding-right: 8px;
+}
+
+.cards-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.card-half {
+  flex: 1;
+  margin-bottom: 0;
 }
 
 .compact-section::-webkit-scrollbar {
