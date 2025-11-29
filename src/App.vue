@@ -1,20 +1,43 @@
 <template>
   <div id="app">
-    <aside class="sidebar">
-  <h2>复杂装备可靠性分析与评估系统</h2>
+    <aside v-if="showShell" class="sidebar">
+      <h2>复杂装备可靠性分析与评估系统</h2>
       <nav class="sidebar-links">
-    <router-link to="/">首页</router-link>
-    <router-link to="/modeling">可靠性建模</router-link>
-  <router-link to="/calculator">可靠性预计</router-link>
-  <router-link to="/allocation">可靠性分配</router-link>
-  <router-link to="/fault-tree">故障树分析</router-link>
+        <router-link to="/">首页</router-link>
+        <router-link to="/modeling">可靠性建模</router-link>
+        <router-link to="/calculator">可靠性预计</router-link>
+        <router-link to="/allocation">可靠性分配</router-link>
+        <router-link to="/fault-tree">故障树分析</router-link>
       </nav>
+      <div class="user-section" v-if="isAuthenticated">
+        <p class="user-name">{{ currentUser?.username }}</p>
+        <button class="logout-btn" @click="handleLogout">退出登录</button>
+      </div>
     </aside>
-    <main class="main-content">
+    <main :class="['main-content', { 'full-width': !showShell }]">
       <router-view />
     </main>
   </div>
 </template>
+
+<script setup>
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuth } from './composables/useAuth'
+
+const route = useRoute()
+const router = useRouter()
+const { init, isAuthenticated, currentUser, logout } = useAuth()
+
+init()
+
+const showShell = computed(() => route.path !== '/login')
+
+const handleLogout = () => {
+  logout()
+  router.replace({ path: '/login' })
+}
+</script>
 
 <style>
 * {
@@ -81,5 +104,38 @@ body {
   width: calc(100vw - 220px);
   max-width: none;
   box-sizing: border-box;
+}
+
+.main-content.full-width {
+  margin-left: 0;
+  width: 100%;
+}
+
+.user-section {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.user-name {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+  word-break: break-all;
+}
+
+.logout-btn {
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 </style>
