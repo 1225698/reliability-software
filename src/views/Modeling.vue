@@ -3,7 +3,7 @@
   <div class="modeling-page">
     <div class="top-bar">
       <div class="palette-ribbon">
-        <ComponentPalette />
+        <ComponentPalette :selected-item="selectedItem" />
       </div>
       <div class="toolbar-actions">
         <button
@@ -22,7 +22,7 @@
       @dragover.prevent
       @drop="onCanvasDrop"
     >
-      <ModelingCanvas ref="canvasRef" />
+      <ModelingCanvas ref="canvasRef" @select="onItemSelect" />
     </div>
   </div>
 </template>
@@ -35,9 +35,14 @@ import ModelingCanvas from '@/components/modeling/ModelingCanvas.vue';
 const canvasRef = ref(null);
 const stageRef = ref(null);
 const exportLoading = ref(false);
+const selectedItem = ref(null);
 
 const onCanvasDrop = (event) => {
   canvasRef.value?.onCanvasDrop(event);
+};
+
+const onItemSelect = (item) => {
+  selectedItem.value = item && item.type === 'model' ? item : null;
 };
 
 const onExportImage = async () => {

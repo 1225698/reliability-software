@@ -4,7 +4,7 @@
     @mousemove="onCanvasMouseMove"
     @mouseup="onCanvasMouseUp"
     @mouseleave="onCanvasMouseUp"
-    @mousedown="hideContextMenu"
+    @mousedown="onCanvasMouseDown"
     @contextmenu.prevent="onCanvasContextMenu"
   >
     <!-- Connection Lines -->
@@ -466,6 +466,13 @@ const onItemClick = (item) => emit('select', item);
 // Expose to parent if needed, or handle drop here
 defineExpose({ onCanvasDrop });
 
+const onCanvasMouseDown = (event) => {
+  if (event.target === event.currentTarget) {
+    emit('select', null);
+  }
+  hideContextMenu();
+};
+
 const hideContextMenu = () => {
   contextMenu.value.visible = false;
   contextMenu.value.targetType = null;
@@ -566,6 +573,7 @@ const deleteGroupItems = (groupIds) => {
   if (hoveredGroup.value && hoveredGroup.value.ids.some(id => uniqueIds.has(id))) {
     hoveredGroup.value = null;
   }
+  emit('select', null);
 };
 
 const copyGroupItems = (groupIds) => {
@@ -668,6 +676,7 @@ const onDeleteItem = () => {
   const index = items.value.findIndex(i => i.id === item.id);
   if (index !== -1) {
     items.value.splice(index, 1);
+    emit('select', null);
   }
 };
 

@@ -65,7 +65,17 @@
     </section>
     <section class="palette-card properties-card">
       <header class="card-title">属性区</header>
-      <div class="card-body properties-body">
+      <div v-if="selectedModel" class="properties-body">
+        <dl class="property-list">
+          <dt>名称</dt>
+          <dd :class="{ placeholder: !hasComponents }">{{ nameDisplay }}</dd>
+          <dt>类型</dt>
+          <dd>{{ typeDisplay }}</dd>
+          <dt>可靠度</dt>
+          <dd :class="{ placeholder: !hasReliability }">{{ reliabilityDisplay }}</dd>
+        </dl>
+      </div>
+      <div v-else class="properties-body empty">
         <p class="placeholder">请选择画布中的模型或组件查看详细属性。</p>
         <ul class="placeholder-list">
           <li>名称</li>
@@ -78,8 +88,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import * as XLSX from 'xlsx';
+
+const props = defineProps({
+  selectedItem: {
+    type: Object,
+    default: null
+  }
+});
 
 const components = ref([
   { id: 'comp1', name: '组件1', reliability: 0.9 },
@@ -89,6 +106,156 @@ const components = ref([
 let nextComponentIndex = components.value.length + 1;
 const fileInput = ref(null);
 const isImporting = ref(false);
+
+const typeLabelMap = {
+  series: '串联',
+  parallel: '并联',
+  redundancy: '冗余'
+};
+
+const selectedModel = computed(() => {
+  const candidate = props.selectedItem;
+  if (!candidate || candidate.type !== 'model') return null;
+  return candidate;
+});
+
+const collectComponents = (model) => {
+  if (!model) return [];
+  if (model.modelType === 'series') {
+    const seriesComponents = Array.isArray(model.components) ? [...model.components] : [];
+    seriesComponents.sort((a, b) => (a?.slot ?? 0) - (b?.slot ?? 0));
+    return seriesComponents;
+  }
+  if (Array.isArray(model.branches)) {
+    const flattened = [];
+    model.branches.forEach((branch) => {
+      if (!branch || !Array.isArray(branch.components)) return;
+      branch.components.forEach((component) => {
+        if (component) flattened.push(component);
+      });
+    });
+    return flattened;
+  }
+  return Array.isArray(model.components) ? [...model.components] : [];
+};
+
+const selectedComponents = computed(() => collectComponents(selectedModel.value));
+
+const hasComponents = computed(() => selectedComponents.value.length > 0);
+
+const nameDisplay = computed(() => {
+  if (!selectedModel.value) return '';
+  const names = selectedComponents.value
+    .map(comp => (comp?.name ?? '').trim())
+    .filter(Boolean);
+  return names.length ? names.join('、') : '待配置';
+});
+
+const typeDisplay = computed(() => {
+  if (!selectedModel.value) return '';
+  return typeLabelMap[selectedModel.value.modelType] || selectedModel.value.modelType || '未知模型';
+});
+
+const formatReliability = (value) => {
+  if (typeof value !== 'number' || Number.isNaN(value) || !Number.isFinite(value)) return '--';
+  return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+};
+
+const clamp01 = (value) => {
+  if (typeof value !== 'number' || Number.isNaN(value) || !Number.isFinite(value)) return null;
+  if (value <= 0) return 0;
+  if (value >= 1) return 1;
+  return value;
+};
+
+const readComponentReliability = (component) => {
+  if (!component) return null;
+  const raw = typeof component.reliability === 'number'
+    ? component.reliability
+    : parseFloat(component.reliability);
+  return clamp01(raw);
+};
+
+const computeSeriesReliability = (components) => {
+  if (!Array.isArray(components) || components.length === 0) return null;
+  let result = 1;
+  for (const comp of components) {
+    const rel = readComponentReliability(comp);
+    if (rel === null) return null;
+    result *= rel;
+  }
+  return clamp01(result);
+};
+
+const computeParallelReliability = (branches) => {
+  if (!Array.isArray(branches) || branches.length === 0) return null;
+  let product = 1;
+  let hasBranch = false;
+  for (const branch of branches) {
+    const rel = computeSeriesReliability(branch?.components || []);
+    if (rel === null) return null;
+    product *= (1 - rel);
+    hasBranch = true;
+  }
+  if (!hasBranch) return null;
+  return clamp01(1 - product);
+};
+
+const computeRedundancyReliability = (branches, k) => {
+  if (!Array.isArray(branches) || branches.length === 0) return null;
+  const branchReliabilities = [];
+  for (const branch of branches) {
+    const rel = computeSeriesReliability(branch?.components || []);
+    if (rel === null) return null;
+    branchReliabilities.push(rel);
+  }
+  const n = branchReliabilities.length;
+  const threshold = Number.isFinite(k) ? Math.max(1, Math.min(Math.floor(k), n)) : n;
+  if (threshold > n) return null;
+
+  let dp = new Array(n + 1).fill(0);
+  dp[0] = 1;
+  branchReliabilities.forEach(rel => {
+    const next = new Array(n + 1).fill(0);
+    for (let successes = 0; successes <= n; successes += 1) {
+      const base = dp[successes];
+      if (base === 0) continue;
+      next[successes] += base * (1 - rel);
+      if (successes + 1 <= n) {
+        next[successes + 1] += base * rel;
+      }
+    }
+    dp = next;
+  });
+  const probability = dp.slice(threshold).reduce((sum, val) => sum + val, 0);
+  return clamp01(probability);
+};
+
+const modelReliability = computed(() => {
+  const model = selectedModel.value;
+  if (!model) return null;
+
+  if (model.modelType === 'series') {
+    return computeSeriesReliability(selectedComponents.value);
+  }
+
+  if (model.modelType === 'parallel') {
+    return computeParallelReliability(model.branches);
+  }
+
+  if (model.modelType === 'redundancy') {
+    return computeRedundancyReliability(model.branches, model.k ?? model.branches?.length ?? 0);
+  }
+
+  return null;
+});
+
+const hasReliability = computed(() => typeof modelReliability.value === 'number');
+
+const reliabilityDisplay = computed(() => {
+  if (!hasReliability.value) return '待配置';
+  return formatReliability(modelReliability.value);
+});
 
 const onModelDragStart = (modelType, dragEvent) => {
   if (!dragEvent?.dataTransfer) return;
@@ -227,6 +394,11 @@ const onFileSelected = async (changeEvent) => {
   padding: 10px 14px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
+.properties-card {
+  flex: 0 0 220px;
+  max-width: 240px;
+  align-self: flex-start;
+}
 .card-title {
   margin: 0 0 10px 0;
   font-size: 14px;
@@ -290,21 +462,47 @@ const onFileSelected = async (changeEvent) => {
   padding-top: 10px;
 }
 .properties-body {
+  padding: 6px 0;
+  font-size: 13px;
+  color: #475569;
+}
+.properties-body.empty {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 13px;
-  color: #4a5568;
 }
-.properties-body .placeholder {
+.properties-body.empty .placeholder {
   margin: 0;
   color: #6b7280;
 }
-.properties-body .placeholder-list {
+.properties-body.empty .placeholder-list {
   margin: 0;
   padding-left: 16px;
   list-style: disc;
-  color: #4a5568;
+  color: #94a3b8;
+}
+.property-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  row-gap: 6px;
+  align-items: baseline;
+}
+.property-list dt {
+  margin: 0;
+  font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+}
+.property-list dd {
+  margin: 0;
+  color: #334155;
+  line-height: 1.4;
+}
+.property-list dd.placeholder {
+  color: #94a3b8;
+  font-style: italic;
 }
 .actions-body button {
   padding: 6px 10px;
