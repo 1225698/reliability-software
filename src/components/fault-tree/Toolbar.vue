@@ -112,9 +112,9 @@
             @click="$emit('tool-select', 'gate-and')"
             title="与门"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20">
-              <path d="M5 6 Q10 6 10 10 Q10 14 5 14" stroke="currentColor" stroke-width="1.5" fill="none"/>
-              <circle cx="12" cy="10" r="2" fill="currentColor"/>
+            <svg width="28" height="28" viewBox="0 0 20 20">
+              <path d="M3 14 L17 14 L17 8 A 7 7 0 0 0 3 8 Z" stroke="currentColor" stroke-width="1" fill="none"/>
+              <circle cx="10" cy="9" r="1.5" fill="currentColor"/>
             </svg>
           </div>
           <div
@@ -122,9 +122,19 @@
             @click="$emit('tool-select', 'gate-or')"
             title="或门"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20">
-              <path d="M5 6 Q10 6 10 10 Q10 14 5 14" stroke="currentColor" stroke-width="1.5" fill="none"/>
-              <path d="M10 8 L12 10 L10 12" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <svg width="28" height="28" viewBox="0 0 20 20">
+              <path d="M3 14 Q 3 9 10 5 Q 17 9 17 14 Q 10 11 3 14" stroke="currentColor" stroke-width="1" fill="none"/>
+              <path d="M10 7v4M8 9h4" stroke="currentColor" stroke-width="1" />
+            </svg>
+          </div>
+          <div
+            :class="['tool', { active: selectedTool === 'gate-voter' }]"
+            @click="$emit('tool-select', 'gate-voter')"
+            title="表决门"
+          >
+            <svg width="28" height="28" viewBox="0 0 20 20">
+              <path d="M3 14 L17 14 L17 8 A 7 7 0 0 0 3 8 Z" stroke="currentColor" stroke-width="1" fill="none"/>
+              <text x="10" y="12" font-size="6" text-anchor="middle" fill="currentColor">r/N</text>
             </svg>
           </div>
         </div>
@@ -161,6 +171,17 @@
             <svg width="20" height="20" viewBox="0 0 20 20">
               <path d="M10 2L12 6h4l-3 3 1 4-4-3-4 3 1-4-3-3h4z" stroke="currentColor" stroke-width="1.5" fill="none"/>
               <circle cx="10" cy="15" r="2" fill="currentColor"/>
+            </svg>
+          </div>
+          <div
+            :class="['tool', { active: selectedTool === 'connection' }]"
+            @click="$emit('tool-select', 'connection')"
+            title="连线"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20">
+              <path d="M4 16 L16 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+              <circle cx="4" cy="16" r="2" fill="currentColor"/>
+              <circle cx="16" cy="4" r="2" fill="currentColor"/>
             </svg>
           </div>
         </div>

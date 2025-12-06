@@ -124,7 +124,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import MenuBar from '@/components/fault-tree/MenuBar.vue'
 import Toolbar from '@/components/fault-tree/Toolbar.vue'
 import Sidebar from '@/components/fault-tree/Sidebar.vue'
@@ -967,7 +967,7 @@ const getNodeLabel = (type) => {
     'event-oval': '条件事件',
     'gate-and': '与门',
     'gate-or': '或门',
-
+    'gate-voter': '表决门',
   }
   return labels[type] || '节点'
 }
@@ -1239,9 +1239,68 @@ const handleKeyDown = (e) => {
 }
 
 // 监听键盘事件
+const STORAGE_KEY = 'fault-tree-workspace-data'
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
+
+  // 加载保存的数据
+  const savedData = localStorage.getItem(STORAGE_KEY)
+  if (savedData) {
+    try {
+      const data = JSON.parse(savedData)
+      if (data.projects && Array.isArray(data.projects)) {
+        projects.value = data.projects
+        
+        // 更新计数器以避免ID冲突
+        let maxPid = 0
+        let maxFid = 0
+        
+        projects.value.forEach(p => {
+          if (p.id) {
+            const pidMatch = p.id.match(/project-(\d+)/)
+            if (pidMatch) {
+              const pid = parseInt(pidMatch[1])
+              if (pid > maxPid) maxPid = pid
+            }
+          }
+          
+          if (p.faultTrees) {
+            p.faultTrees.forEach(ft => {
+              if (ft.id) {
+                const fidMatch = ft.id.match(/ft-(\d+)/)
+                if (fidMatch) {
+                  const fid = parseInt(fidMatch[1])
+                  if (fid > maxFid) maxFid = fid
+                }
+              }
+            })
+          }
+        })
+        
+        projectIdCounter = maxPid + 1
+        faultTreeIdCounter = maxFid + 1
+      }
+      
+      if (data.currentProjectId) currentProjectId.value = data.currentProjectId
+      if (data.currentFaultTreeId) currentFaultTreeId.value = data.currentFaultTreeId
+      if (data.analysisTreeItems) analysisTreeItems.value = data.analysisTreeItems
+    } catch (e) {
+      console.error('Failed to load saved data', e)
+    }
+  }
 })
+
+// 自动保存数据
+watch([projects, currentProjectId, currentFaultTreeId, analysisTreeItems], () => {
+  const data = {
+    projects: projects.value,
+    currentProjectId: currentProjectId.value,
+    currentFaultTreeId: currentFaultTreeId.value,
+    analysisTreeItems: analysisTreeItems.value
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+}, { deep: true })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)

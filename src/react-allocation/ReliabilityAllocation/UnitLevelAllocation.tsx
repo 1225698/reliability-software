@@ -45,8 +45,8 @@ export const UnitLevelAllocation: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <section style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1, overflow: 'hidden' }}>
+      <section style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end', flexShrink: 0 }}>
         <div>
           <label>当前分系统</label><br />
           <select value={selectedSystemId || ''} onChange={e => dispatch({ type: 'SELECT_SYSTEM', payload: e.target.value || null })}>
@@ -70,18 +70,18 @@ export const UnitLevelAllocation: React.FC = () => {
       </section>
 
       {!selectedSystemId && (
-        <div style={{ background: '#fff3cd', color: '#856404', padding: '.6rem .8rem', borderRadius: 4, fontSize: '.85rem' }}>
+        <div style={{ background: '#fff3cd', color: '#856404', padding: '.6rem .8rem', borderRadius: 4, fontSize: '.85rem', flexShrink: 0 }}>
           请先在“系统级分配”结果表中单击选择一个系统，或在此下拉框中选择，以进行LRU级分配。
         </div>
       )}
 
       {selectedSystemId && (
         <>
-          <section>
-            <h3 style={{ margin: '0 0 .5rem' }}>LRU数据</h3>
-            <div style={{ overflowX: 'auto' }}>
+          <section style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+            <h3 style={{ margin: '0 0 .5rem', flexShrink: 0 }}>LRU数据</h3>
+            <div style={{ overflow: 'auto', flex: 1, border: '1px solid #eee' }}>
               <table className='re-table'>
-                <thead>
+                <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
                   <tr>
                     <th style={{ width: '33%' }}>LRU名称</th>
                     <th style={{ width: '20%' }}>数量</th>
@@ -105,7 +105,7 @@ export const UnitLevelAllocation: React.FC = () => {
                   ))}
                 </tbody>
               </table>
-              <div style={{ marginTop: '.5rem' }}>
+              <div style={{ marginTop: '.5rem', padding: '0 .5rem .5rem' }}>
                 <button
                   onClick={() => {
                     if (!selectedSystemId) return;
@@ -122,11 +122,11 @@ export const UnitLevelAllocation: React.FC = () => {
             </div>
           </section>
 
-          <section>
-            <h3 style={{ margin: '0 0 .5rem' }}>LRU分配结果</h3>
-            <div style={{ overflowX: 'auto' }}>
+          <section style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+            <h3 style={{ margin: '0 0 .5rem', flexShrink: 0 }}>LRU分配结果</h3>
+            <div style={{ overflow: 'auto', flex: 1, border: '1px solid #eee' }}>
               <table className='re-table'>
-                <thead>
+                <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
                   <tr>
                     <th>LRU名称</th>
                     <th>数量</th>

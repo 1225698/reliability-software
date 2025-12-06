@@ -32,8 +32,8 @@ export const SystemLevelAllocation: React.FC = () => {
   };
 
   return (
-    <div className="panel system-level" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      <section style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-end' }}>
+    <div className="panel system-level" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1, overflow: 'hidden' }}>
+      <section style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-end', flexShrink: 0 }}>
         <div>
           <label>任务 MTBF (h)</label><br />
           <input type="number" value={params.taskMTBF} min={1} onChange={e => dispatch({ type: 'SET_PARAMS', payload: { taskMTBF: Number(e.target.value) } })} />
@@ -54,11 +54,11 @@ export const SystemLevelAllocation: React.FC = () => {
         </div>
       </section>
 
-      <section>
-        <h3 style={{ margin: '0 0 .5rem' }}>系统数据</h3>
-        <div style={{ overflowX: 'auto' }}>
+      <section style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+        <h3 style={{ margin: '0 0 .5rem', flexShrink: 0 }}>系统数据</h3>
+        <div style={{ overflow: 'auto', flex: 1, border: '1px solid #eee' }}>
           <table className="re-table">
-            <thead>
+            <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
               <tr>
                 <th style={{ width: '33%' }}>系统名称</th>
                 <th style={{ width: 'calc(100% - 33% - 70px)' }}>预计故障率 (1/h)</th>
@@ -90,7 +90,7 @@ export const SystemLevelAllocation: React.FC = () => {
               ))}
             </tbody>
           </table>
-          <div style={{ marginTop: '.5rem' }}>
+          <div style={{ marginTop: '.5rem', padding: '0 .5rem .5rem' }}>
             <button
               onClick={() => {
                 const id = `sys-${systems.length + 1}-${Date.now()}`;
@@ -102,11 +102,11 @@ export const SystemLevelAllocation: React.FC = () => {
         </div>
       </section>
 
-      <section>
-        <h3 style={{ margin: '0 0 .5rem' }}>系统分配结果</h3>
-        <div style={{ overflowX: 'auto' }}>
+      <section style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+        <h3 style={{ margin: '0 0 .5rem', flexShrink: 0 }}>系统分配结果</h3>
+        <div style={{ overflow: 'auto', flex: 1, border: '1px solid #eee' }}>
           <table className="re-table">
-            <thead>
+            <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
               <tr>
                 <th>系统名称</th>
                 <th>分配系数 k</th>

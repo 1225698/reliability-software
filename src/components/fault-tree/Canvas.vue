@@ -1,11 +1,12 @@
 <template>
-  <div class="canvas-container" ref="containerRef" @click="handleCanvasClick" @mousemove="handleMouseMove" @mouseup="handleMouseUp">
-    <svg 
-      class="canvas-svg" 
-      :width="canvasWidth" 
-      :height="canvasHeight"
-      @contextmenu.prevent
-    >
+  <div class="canvas-container" ref="containerRef" @click="handleCanvasClick" @mousemove="handleMouseMove" @mouseup="handleMouseUp" @wheel.ctrl.prevent="handleWheel">
+    <div class="canvas-content" :style="{ transform: `scale(${zoomLevel})`, transformOrigin: '0 0' }">
+      <svg 
+        class="canvas-svg" 
+        :width="canvasWidth" 
+        :height="canvasHeight"
+        @contextmenu.prevent
+      >
       <!-- 连接线 -->
       <g class="connections">
         <ConnectionLine
@@ -22,10 +23,11 @@
           v-for="node in nodes"
           :key="node.id"
           :node="node"
-          :selected="selectedNodeId === node.id"
+          :selected="selectedNodeId === node.id || quickConnectionSource?.id === node.id"
           :class="{ 'connection-source': quickConnectionSource?.id === node.id }"
           @mousedown="handleNodeMouseDown(node, $event)"
           @dblclick="handleNodeDoubleClick(node)"
+          @contextmenu.prevent.stop="handleNodeContextMenu(node, $event)"
           @connection-start="handleConnectionStart(node, $event)"
           @update="updateNode(node.id, $event)"
         />
@@ -40,7 +42,7 @@
         fill="#1890ff"
         font-weight="bold"
       >
-        点击另一个节点以建立连接，或按 ESC 取消
+        {{ selectedTool === 'connection' ? '请点击目标节点以建立连接' : '点击另一个节点以建立连接，或按 ESC 取消' }}
       </text>
       
       <!-- 临时连接线（正在绘制时） -->
@@ -69,6 +71,19 @@
         </marker>
       </defs>
     </svg>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div 
+      v-if="contextMenu.visible"
+      class="context-menu"
+      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+      @click.stop
+    >
+      <div class="menu-item" @click="handleMenuEdit">编辑</div>
+      <div class="menu-item" @click="handleMenuCopy">复制</div>
+      <div class="menu-item delete" @click="handleMenuDelete">删除</div>
+    </div>
   </div>
 </template>
 
@@ -95,6 +110,15 @@ const drawingConnection = ref(null)
 const connectionStartNode = ref(null)
 const quickConnectionMode = ref(false) // 快速连接模式
 const quickConnectionSource = ref(null) // 快速连接的源节点
+const zoomLevel = ref(1.0)
+
+// 右键菜单状态
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  nodeId: null
+})
 
 let nodeIdCounter = 1
 let connectionIdCounter = 1
@@ -149,6 +173,15 @@ watch(() => [props.nodes, props.connections], () => {
   initializeCounters()
 }, { deep: false, immediate: false })
 
+// 监听工具变化
+watch(() => props.selectedTool, (newTool) => {
+  if (newTool === 'connection') {
+    selectedNodeId.value = null
+    quickConnectionMode.value = false
+    quickConnectionSource.value = null
+  }
+})
+
 const updateCanvasSize = () => {
   if (containerRef.value) {
     canvasWidth.value = containerRef.value.clientWidth
@@ -156,7 +189,68 @@ const updateCanvasSize = () => {
   }
 }
 
+const handleNodeContextMenu = (node, e) => {
+  e.preventDefault()
+  e.stopPropagation()
+  const rect = containerRef.value.getBoundingClientRect()
+  contextMenu.value = {
+    visible: true,
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+    nodeId: node.id
+  }
+}
+
+const closeContextMenu = () => {
+  contextMenu.value.visible = false
+}
+
+const handleMenuEdit = () => {
+  const node = props.nodes.find(n => n.id === contextMenu.value.nodeId)
+  if (node) {
+    emit('edit-node', node)
+  }
+  closeContextMenu()
+}
+
+const handleMenuCopy = () => {
+  const node = props.nodes.find(n => n.id === contextMenu.value.nodeId)
+  if (node) {
+    const newNode = {
+      ...node,
+      id: `node-${nodeIdCounter++}`,
+      x: node.x + 20,
+      y: node.y + 20,
+      label: node.label + ' (副本)'
+    }
+    emit('add-node', newNode)
+  }
+  closeContextMenu()
+}
+
+const handleMenuDelete = () => {
+  if (contextMenu.value.nodeId) {
+    emit('delete-node', contextMenu.value.nodeId)
+  }
+  closeContextMenu()
+}
+
+const handleWheel = (e) => {
+  if (e.ctrlKey) {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? -0.1 : 0.1
+    const newZoom = Math.max(0.1, Math.min(5, zoomLevel.value + delta))
+    zoomLevel.value = parseFloat(newZoom.toFixed(1))
+  }
+}
+
 const handleCanvasClick = (e) => {
+  // 关闭右键菜单
+  if (contextMenu.value.visible) {
+    closeContextMenu()
+    return
+  }
+
   // 如果点击在节点或连接点上，不要添加新节点
   if (e.target.closest('.node') ||
       e.target.classList.contains('connection-point-hitarea') ||
@@ -177,8 +271,8 @@ const handleCanvasClick = (e) => {
       props.selectedTool === 'event-undeveloped' ||
       props.selectedTool === 'event-conditional') {
     const rect = containerRef.value.getBoundingClientRect()
-    let x = e.clientX - rect.left
-    let y = e.clientY - rect.top
+    let x = (e.clientX - rect.left) / zoomLevel.value
+    let y = (e.clientY - rect.top) / zoomLevel.value
 
     // 映射新的工具名称到节点类型
     const nodeType = mapToolToNodeType(props.selectedTool)
@@ -214,8 +308,8 @@ const handleConnectionStart = (node, e) => {
   e.preventDefault()
   connectionStartNode.value = node
   const rect = containerRef.value.getBoundingClientRect()
-  const mouseX = e.clientX - rect.left
-  const mouseY = e.clientY - rect.top
+  const mouseX = (e.clientX - rect.left) / zoomLevel.value
+  const mouseY = (e.clientY - rect.top) / zoomLevel.value
 
   // 条件事件从右侧中间连接
   if (node.type === 'event-oval') {
@@ -250,7 +344,45 @@ const handleNodeMouseDown = (node, e) => {
 
   e.stopPropagation()
 
-  // 快速连接模式
+  // 连线模式处理
+  if (props.selectedTool === 'connection') {
+    if (!quickConnectionMode.value) {
+      // 第一次点击：选择起始节点
+      quickConnectionMode.value = true
+      quickConnectionSource.value = node
+    } else {
+      // 第二次点击：选择目标节点并连接
+      if (node.id !== quickConnectionSource.value.id) {
+        // 检查是否是底事件（底事件下面不能有节点）
+        if (quickConnectionSource.value.type === 'event-circle') {
+          alert('底事件下面不能有节点！')
+          quickConnectionMode.value = false
+          quickConnectionSource.value = null
+          return
+        }
+
+        // 检查连接是否已存在
+        const exists = props.connections.some(conn =>
+          conn.from === quickConnectionSource.value.id && conn.to === node.id
+        )
+
+        if (!exists) {
+          const connection = {
+            id: `conn-${connectionIdCounter++}`,
+            from: quickConnectionSource.value.id,
+            to: node.id
+          }
+          emit('add-connection', connection)
+        }
+      }
+      // 完成连接后退出快速连接模式
+      quickConnectionMode.value = false
+      quickConnectionSource.value = null
+    }
+    return
+  }
+
+  // 快速连接模式 (Ctrl键)
   if (quickConnectionMode.value && quickConnectionSource.value) {
     // 点击第二个节点，建立连接
     if (node.id !== quickConnectionSource.value.id) {
@@ -295,14 +427,14 @@ const handleNodeMouseDown = (node, e) => {
     isDragging.value = true
     const rect = containerRef.value.getBoundingClientRect()
     dragOffset.value = {
-      x: e.clientX - rect.left - node.x,
-      y: e.clientY - rect.top - node.y
+      x: (e.clientX - rect.left) / zoomLevel.value - node.x,
+      y: (e.clientY - rect.top) / zoomLevel.value - node.y
     }
   } else if (props.selectedTool === 'delete') {
     emit('delete-node', node.id)
     selectedNodeId.value = null
-  } else if (props.selectedTool === 'gate-and' || props.selectedTool === 'gate-or') {
-    // 如果选择的是与门或或门，且点击的是中间事件，直接给中间事件设置逻辑门
+  } else if (props.selectedTool === 'gate-and' || props.selectedTool === 'gate-or' || props.selectedTool === 'gate-voter') {
+    // 如果选择的是与门、或门或表决门，且点击的是中间事件，直接给中间事件设置逻辑门
     if (node.type === 'event-rect') {
       emit('update-node', node.id, { logicGate: props.selectedTool })
       selectedNodeId.value = node.id
@@ -314,7 +446,8 @@ const handleNodeMouseDown = (node, e) => {
   } else if (props.selectedTool.startsWith('event-') ||
              (props.selectedTool.startsWith('gate-') &&
               props.selectedTool !== 'gate-and' &&
-              props.selectedTool !== 'gate-or') ||
+              props.selectedTool !== 'gate-or' &&
+              props.selectedTool !== 'gate-voter') ||
              props.selectedTool === 'event-intermediate' ||
              props.selectedTool === 'event-basic' ||
              props.selectedTool === 'event-undeveloped' ||
@@ -330,8 +463,8 @@ const handleMouseMove = (e) => {
   if (drawingConnection.value) {
     // 优先处理连接绘制
     const rect = containerRef.value.getBoundingClientRect()
-    drawingConnection.value.toX = e.clientX - rect.left
-    drawingConnection.value.toY = e.clientY - rect.top
+    drawingConnection.value.toX = (e.clientX - rect.left) / zoomLevel.value
+    drawingConnection.value.toY = (e.clientY - rect.top) / zoomLevel.value
     return
   }
   
@@ -340,8 +473,8 @@ const handleMouseMove = (e) => {
     const node = props.nodes.find(n => n.id === selectedNodeId.value)
     if (node) {
       emit('update-node', selectedNodeId.value, {
-        x: e.clientX - rect.left - dragOffset.value.x,
-        y: e.clientY - rect.top - dragOffset.value.y
+        x: (e.clientX - rect.left) / zoomLevel.value - dragOffset.value.x,
+        y: (e.clientY - rect.top) / zoomLevel.value - dragOffset.value.y
       })
     }
   }
@@ -351,8 +484,8 @@ const handleMouseUp = (e) => {
   // 优先处理连接完成
   if (drawingConnection.value && connectionStartNode.value) {
     const rect = containerRef.value.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    const x = (e.clientX - rect.left) / zoomLevel.value
+    const y = (e.clientY - rect.top) / zoomLevel.value
     
     // 查找是否释放到了节点的顶部区域
     const targetNode = props.nodes.find(node => {
@@ -397,6 +530,31 @@ const handleMouseUp = (e) => {
   }
   
   if (isDragging.value) {
+    // 自动吸附逻辑：如果节点与父节点水平位置接近，自动垂直对齐
+    if (selectedNodeId.value) {
+      const node = props.nodes.find(n => n.id === selectedNodeId.value)
+      if (node) {
+        // 查找该节点的父节点（连接到该节点的节点）
+        const parentConnections = props.connections.filter(c => c.to === node.id)
+        
+        for (const conn of parentConnections) {
+          const parentNode = props.nodes.find(n => n.id === conn.from)
+          if (parentNode) {
+            const nodeCenterX = node.x + node.width / 2
+            const parentCenterX = parentNode.x + parentNode.width / 2
+            
+            // 如果中心点距离小于 20px，则自动吸附
+            if (Math.abs(nodeCenterX - parentCenterX) < 20) {
+              emit('update-node', node.id, {
+                x: parentNode.x + parentNode.width / 2 - node.width / 2
+              })
+              break // 只对齐第一个找到的父节点
+            }
+          }
+        }
+      }
+    }
+
     isDragging.value = false
   }
 }
@@ -572,7 +730,7 @@ const getNodeLabel = (type) => {
     'event-oval': '条件事件',
     'gate-and': '与门',
     'gate-or': '或门',
-    
+    'gate-voter': '表决门',
   }
   return labels[type] || '节点'
 }
@@ -618,5 +776,36 @@ const getNodeLabel = (type) => {
   background: transparent;
   min-width: 100%;
   min-height: 100%;
+}
+
+.context-menu {
+  position: absolute;
+  background: white;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 100px;
+  z-index: 1000;
+}
+
+.menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  transition: all 0.3s;
+}
+
+.menu-item:hover {
+  background: #f5f5f5;
+}
+
+.menu-item.delete {
+  color: #ff4d4f;
+}
+
+.menu-item.delete:hover {
+  background: #fff1f0;
 }
 </style>

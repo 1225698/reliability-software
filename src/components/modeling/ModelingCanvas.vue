@@ -1,12 +1,15 @@
 <template>
   <div
+    ref="canvasEl"
     class="modeling-canvas"
     @mousemove="onCanvasMouseMove"
     @mouseup="onCanvasMouseUp"
     @mouseleave="onCanvasMouseUp"
     @mousedown="onCanvasMouseDown"
     @contextmenu.prevent="onCanvasContextMenu"
+    @wheel.ctrl.prevent="handleWheel"
   >
+    <div class="canvas-content" :style="{ transform: `scale(${zoomLevel})`, transformOrigin: '0 0' }">
     <!-- Connection Lines -->
     <svg class="connection-lines">
       <path
@@ -154,6 +157,7 @@
         </div>
       </template>
     </div>
+    </div>
 
     <div
       v-if="contextMenu.visible"
@@ -177,8 +181,20 @@
 <script setup>
 import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount } from 'vue';
 
+const canvasEl = ref(null);
 const items = ref([]);
 const connections = ref([]);
+const zoomLevel = ref(1.0);
+
+const handleWheel = (e) => {
+  if (e.ctrlKey) {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    const newZoom = Math.max(0.1, Math.min(5, zoomLevel.value + delta));
+    zoomLevel.value = parseFloat(newZoom.toFixed(1));
+  }
+};
+
 let idCounter = 0;
 let componentInstanceCounter = 0;
 const STORAGE_KEY = 'modeling-canvas-state-v1';
@@ -398,9 +414,11 @@ const onCanvasDrop = (event) => {
   if (!dataString) return;
 
   const data = JSON.parse(dataString);
-  const canvasRect = event.currentTarget.getBoundingClientRect();
-  const x = event.clientX - canvasRect.left;
-  const y = event.clientY - canvasRect.top;
+  const canvasRect = canvasEl.value.getBoundingClientRect();
+  const scrollLeft = canvasEl.value.scrollLeft;
+  const scrollTop = canvasEl.value.scrollTop;
+  const x = (event.clientX - canvasRect.left + scrollLeft) / zoomLevel.value;
+  const y = (event.clientY - canvasRect.top + scrollTop) / zoomLevel.value;
 
   if (data.type === 'model') {
     const newItem = {
@@ -467,7 +485,9 @@ const onItemClick = (item) => emit('select', item);
 defineExpose({ onCanvasDrop });
 
 const onCanvasMouseDown = (event) => {
-  if (event.target === event.currentTarget) {
+  if (event.target === event.currentTarget || 
+      event.target.classList.contains('canvas-content') || 
+      event.target.closest('.connection-lines')) {
     emit('select', null);
   }
   hideContextMenu();
@@ -481,7 +501,9 @@ const hideContextMenu = () => {
 };
 
 const onCanvasContextMenu = (event) => {
-  if (event.target === event.currentTarget) {
+  if (event.target === event.currentTarget || 
+      event.target.classList.contains('canvas-content') || 
+      event.target.closest('.connection-lines')) {
     hideContextMenu();
   }
 };
@@ -807,8 +829,8 @@ const onItemMouseDown = (item, event) => {
   draggedItemId.value = item.id;
   const rect = event.currentTarget.getBoundingClientRect();
   dragOffset.value = {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top,
+    x: (event.clientX - rect.left) / zoomLevel.value,
+    y: (event.clientY - rect.top) / zoomLevel.value,
   };
   items.value.forEach(i => i.style.zIndex = (i.id === item.id ? 10 : 1));
 };
@@ -816,8 +838,14 @@ const onItemMouseDown = (item, event) => {
 const onCanvasMouseMove = (event) => {
   // Group dragging
   if (groupDrag.value.active) {
-    const dx = event.clientX - groupDrag.value.startMouse.x;
-    const dy = event.clientY - groupDrag.value.startMouse.y;
+    const rect = canvasEl.value.getBoundingClientRect();
+    const scrollLeft = canvasEl.value.scrollLeft;
+    const scrollTop = canvasEl.value.scrollTop;
+    const currentMouseX = (event.clientX - rect.left + scrollLeft) / zoomLevel.value;
+    const currentMouseY = (event.clientY - rect.top + scrollTop) / zoomLevel.value;
+
+    const dx = currentMouseX - groupDrag.value.startMouse.x;
+    const dy = currentMouseY - groupDrag.value.startMouse.y;
     hoveredGroup.value.ids.forEach(id => {
       const startPos = groupDrag.value.startPositions[id];
       const item = items.value.find(i => i.id === id);
@@ -841,9 +869,11 @@ const onCanvasMouseMove = (event) => {
   const draggedItem = items.value.find(i => i.id === draggedItemId.value);
   if (!draggedItem) return;
 
-  const canvasRect = event.currentTarget.getBoundingClientRect();
-  let newX = event.clientX - canvasRect.left - dragOffset.value.x;
-  let newY = event.clientY - canvasRect.top - dragOffset.value.y;
+  const canvasRect = canvasEl.value.getBoundingClientRect();
+  const scrollLeft = canvasEl.value.scrollLeft;
+  const scrollTop = canvasEl.value.scrollTop;
+  let newX = (event.clientX - canvasRect.left + scrollLeft) / zoomLevel.value - dragOffset.value.x;
+  let newY = (event.clientY - canvasRect.top + scrollTop) / zoomLevel.value - dragOffset.value.y;
 
   // Snapping Logic
   potentialSnap.value = null;
@@ -1014,9 +1044,11 @@ function buildGroups() {
 
 function detectHoveredGroup(event) {
   const groups = buildGroups();
-  const canvasRect = event.currentTarget.getBoundingClientRect();
-  const mx = event.clientX - canvasRect.left;
-  const my = event.clientY - canvasRect.top;
+  const canvasRect = canvasEl.value.getBoundingClientRect();
+  const scrollLeft = canvasEl.value.scrollLeft;
+  const scrollTop = canvasEl.value.scrollTop;
+  const mx = (event.clientX - canvasRect.left + scrollLeft) / zoomLevel.value;
+  const my = (event.clientY - canvasRect.top + scrollTop) / zoomLevel.value;
   const margin = 15; // 靠近阈值
   let found = null;
   for (const g of groups) {
@@ -1049,7 +1081,13 @@ function updateHoveredGroupBBox() {
 function onGroupMouseDown(event) {
   if (!hoveredGroup.value) return;
   groupDrag.value.active = true;
-  groupDrag.value.startMouse = { x: event.clientX, y: event.clientY };
+  const rect = canvasEl.value.getBoundingClientRect();
+  const scrollLeft = canvasEl.value.scrollLeft;
+  const scrollTop = canvasEl.value.scrollTop;
+  groupDrag.value.startMouse = { 
+    x: (event.clientX - rect.left + scrollLeft) / zoomLevel.value, 
+    y: (event.clientY - rect.top + scrollTop) / zoomLevel.value 
+  };
   groupDrag.value.startPositions = {};
   hoveredGroup.value.ids.forEach(id => {
     const it = items.value.find(i => i.id === id);
@@ -1390,8 +1428,38 @@ watch(connections, () => {
   height: 100%;
   background-color: white;
   border: 1px solid #ccc;
-  overflow: hidden; /* Important for positioning */
+  overflow: auto; /* Important for positioning */
   user-select: none; /* Prevent text selection while dragging */
+  /* 添加网格背景 */
+  background-image: 
+    linear-gradient(to right, #f0f0f0 1px, transparent 1px),
+    linear-gradient(to bottom, #f0f0f0 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Custom Scrollbar */
+.modeling-canvas::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.modeling-canvas::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modeling-canvas::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+.modeling-canvas::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.canvas-content {
+  min-width: 3000px;
+  min-height: 3000px;
+  position: relative;
 }
 
 .connection-lines {

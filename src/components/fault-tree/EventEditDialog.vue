@@ -40,11 +40,22 @@
             <option value="">中间事件</option>
             <option value="gate-and">与门</option>
             <option value="gate-or">或门</option>
-           
+            <option value="gate-voter">表决门</option>
           </select>
         </div>
-        
-        <!-- 底事件显示发生概率 -->
+
+        <!-- 表决门参数 (当逻辑门为表决门时显示) -->
+        <div v-if="formData.logicGate === 'gate-voter' || formData.type === 'gate-voter'" class="form-group">
+          <label for="gate-r">r值 (表决门r/N):</label>
+          <input 
+            id="gate-r" 
+            v-model.number="formData.voterR" 
+            type="number" 
+            min="1"
+            class="form-input" 
+            placeholder="请输入r值"
+          />
+        </div>
         <div v-if="formData.type === 'event-circle'" class="form-group">
           <label for="event-probability">发生概率:</label>
           <input
@@ -83,7 +94,7 @@
         </div>
 
         <!-- 表决门参数 -->
-        <div v-if="formData.type === 'gate-voter' || formData.type === 'gate-priority-and'" class="form-group">
+        <div v-if="formData.type === 'gate-priority-and'" class="form-group">
           <label for="gate-r">r值 (表决门r/N):</label>
           <input 
             id="gate-r" 
