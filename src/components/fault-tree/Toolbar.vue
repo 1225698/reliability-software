@@ -5,7 +5,7 @@
       <div class="tool-group">
         <div class="group-title">编辑</div>
         <div class="tools">
-          <div 
+          <div
             class="tool"
             @click="$emit('tool-select', 'new-fault-tree')"
             title="新建故障树"
@@ -14,7 +14,7 @@
               <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </div>
-          <div 
+          <div
             class="tool"
             @click="$emit('tool-select', 'delete-fault-tree')"
             title="删除故障树"
@@ -23,7 +23,7 @@
               <path d="M5 5l10 10M15 5l-10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </div>
-          <div 
+          <div
             class="tool"
             @click="$emit('tool-select', 'rename-fault-tree')"
             title="重命名故障树"
@@ -35,7 +35,7 @@
               <circle cx="13" cy="13" r="1" fill="currentColor"/>
             </svg>
           </div>
-          <div 
+          <div
             class="tool"
             @click="$emit('tool-select', 'copy-fault-tree')"
             title="复制故障树"
@@ -45,7 +45,7 @@
               <rect x="6" y="6" width="10" height="12" stroke="currentColor" stroke-width="1.5" fill="none"/>
             </svg>
           </div>
-          <div 
+          <div
             class="tool"
             @click="$emit('tool-select', 'paste-fault-tree')"
             title="粘贴故障树"

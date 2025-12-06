@@ -485,8 +485,8 @@ const onItemClick = (item) => emit('select', item);
 defineExpose({ onCanvasDrop });
 
 const onCanvasMouseDown = (event) => {
-  if (event.target === event.currentTarget || 
-      event.target.classList.contains('canvas-content') || 
+  if (event.target === event.currentTarget ||
+      event.target.classList.contains('canvas-content') ||
       event.target.closest('.connection-lines')) {
     emit('select', null);
   }
@@ -501,8 +501,8 @@ const hideContextMenu = () => {
 };
 
 const onCanvasContextMenu = (event) => {
-  if (event.target === event.currentTarget || 
-      event.target.classList.contains('canvas-content') || 
+  if (event.target === event.currentTarget ||
+      event.target.classList.contains('canvas-content') ||
       event.target.closest('.connection-lines')) {
     hideContextMenu();
   }
@@ -1084,9 +1084,9 @@ function onGroupMouseDown(event) {
   const rect = canvasEl.value.getBoundingClientRect();
   const scrollLeft = canvasEl.value.scrollLeft;
   const scrollTop = canvasEl.value.scrollTop;
-  groupDrag.value.startMouse = { 
-    x: (event.clientX - rect.left + scrollLeft) / zoomLevel.value, 
-    y: (event.clientY - rect.top + scrollTop) / zoomLevel.value 
+  groupDrag.value.startMouse = {
+    x: (event.clientX - rect.left + scrollLeft) / zoomLevel.value,
+    y: (event.clientY - rect.top + scrollTop) / zoomLevel.value
   };
   groupDrag.value.startPositions = {};
   hoveredGroup.value.ids.forEach(id => {
@@ -1431,7 +1431,7 @@ watch(connections, () => {
   overflow: auto; /* Important for positioning */
   user-select: none; /* Prevent text selection while dragging */
   /* 添加网格背景 */
-  background-image: 
+  background-image:
     linear-gradient(to right, #f0f0f0 1px, transparent 1px),
     linear-gradient(to bottom, #f0f0f0 1px, transparent 1px);
   background-size: 20px 20px;

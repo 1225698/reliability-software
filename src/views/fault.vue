@@ -1251,11 +1251,11 @@ onMounted(() => {
       const data = JSON.parse(savedData)
       if (data.projects && Array.isArray(data.projects)) {
         projects.value = data.projects
-        
+
         // 更新计数器以避免ID冲突
         let maxPid = 0
         let maxFid = 0
-        
+
         projects.value.forEach(p => {
           if (p.id) {
             const pidMatch = p.id.match(/project-(\d+)/)
@@ -1264,7 +1264,7 @@ onMounted(() => {
               if (pid > maxPid) maxPid = pid
             }
           }
-          
+
           if (p.faultTrees) {
             p.faultTrees.forEach(ft => {
               if (ft.id) {
@@ -1277,11 +1277,11 @@ onMounted(() => {
             })
           }
         })
-        
+
         projectIdCounter = maxPid + 1
         faultTreeIdCounter = maxFid + 1
       }
-      
+
       if (data.currentProjectId) currentProjectId.value = data.currentProjectId
       if (data.currentFaultTreeId) currentFaultTreeId.value = data.currentFaultTreeId
       if (data.analysisTreeItems) analysisTreeItems.value = data.analysisTreeItems

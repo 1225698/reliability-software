@@ -5,36 +5,36 @@
         <span class="dialog-title">{{ getDialogTitle() }}</span>
         <button class="dialog-close" @click="handleCancel">×</button>
       </div>
-      
+
       <div class="dialog-body">
         <div class="form-group">
           <label for="event-name">事件名称:</label>
-          <input 
-            id="event-name" 
-            v-model="formData.label" 
-            type="text" 
-            class="form-input" 
+          <input
+            id="event-name"
+            v-model="formData.label"
+            type="text"
+            class="form-input"
             placeholder="请输入事件名称"
           />
         </div>
-        
+
         <div class="form-group">
           <label for="event-description">事件描述:</label>
-          <input 
-            id="event-description" 
-            v-model="formData.description" 
-            type="text" 
-            class="form-input" 
+          <input
+            id="event-description"
+            v-model="formData.description"
+            type="text"
+            class="form-input"
             placeholder="请输入事件描述"
           />
         </div>
-        
+
         <!-- 中间事件显示逻辑门下拉选择 -->
         <div v-if="formData.type === 'event-rect'" class="form-group">
           <label for="logic-gate">逻辑门:</label>
-          <select 
-            id="logic-gate" 
-            v-model="formData.logicGate" 
+          <select
+            id="logic-gate"
+            v-model="formData.logicGate"
             class="form-select"
           >
             <option value="">中间事件</option>
@@ -47,12 +47,12 @@
         <!-- 表决门参数 (当逻辑门为表决门时显示) -->
         <div v-if="formData.logicGate === 'gate-voter' || formData.type === 'gate-voter'" class="form-group">
           <label for="gate-r">r值 (表决门r/N):</label>
-          <input 
-            id="gate-r" 
-            v-model.number="formData.voterR" 
-            type="number" 
+          <input
+            id="gate-r"
+            v-model.number="formData.voterR"
+            type="number"
             min="1"
-            class="form-input" 
+            class="form-input"
             placeholder="请输入r值"
           />
         </div>
@@ -96,17 +96,17 @@
         <!-- 表决门参数 -->
         <div v-if="formData.type === 'gate-priority-and'" class="form-group">
           <label for="gate-r">r值 (表决门r/N):</label>
-          <input 
-            id="gate-r" 
-            v-model.number="formData.voterR" 
-            type="number" 
+          <input
+            id="gate-r"
+            v-model.number="formData.voterR"
+            type="number"
             min="1"
-            class="form-input" 
+            class="form-input"
             placeholder="r"
           />
         </div>
       </div>
-      
+
       <div class="dialog-footer">
         <button class="btn btn-primary" @click="handleConfirm">确定(O)</button>
         <button class="btn btn-default" @click="handleCancel">取消(C)</button>
@@ -156,7 +156,7 @@ watch(() => props.nodeData, (newData) => {
 
 const getDialogTitle = () => {
   if (!formData.value.type) return '编辑节点'
-  
+
   if (formData.value.type.startsWith('event-')) {
     // 根据事件类型返回标题
     if (formData.value.type === 'event-rect') {
@@ -173,7 +173,7 @@ const getDialogTitle = () => {
     const gateNames = {
       'gate-and': '与门',
       'gate-or': '或门',
-     
+
     }
     return gateNames[formData.value.type] || '逻辑门'
   }

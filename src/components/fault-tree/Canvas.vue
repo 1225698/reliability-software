@@ -1,9 +1,9 @@
 <template>
   <div class="canvas-container" ref="containerRef" @click="handleCanvasClick" @mousemove="handleMouseMove" @mouseup="handleMouseUp" @wheel.ctrl.prevent="handleWheel">
     <div class="canvas-content" :style="{ transform: `scale(${zoomLevel})`, transformOrigin: '0 0' }">
-      <svg 
-        class="canvas-svg" 
-        :width="canvasWidth" 
+      <svg
+        class="canvas-svg"
+        :width="canvasWidth"
         :height="canvasHeight"
         @contextmenu.prevent
       >
@@ -16,7 +16,7 @@
           :nodes="nodes"
         />
       </g>
-      
+
       <!-- 节点 -->
       <g class="nodes">
         <FaultTreeNode
@@ -32,7 +32,7 @@
           @update="updateNode(node.id, $event)"
         />
       </g>
-      
+
       <!-- 快速连接模式提示 -->
       <text
         v-if="quickConnectionMode"
@@ -44,7 +44,7 @@
       >
         {{ selectedTool === 'connection' ? '请点击目标节点以建立连接' : '点击另一个节点以建立连接，或按 ESC 取消' }}
       </text>
-      
+
       <!-- 临时连接线（正在绘制时） -->
       <line
         v-if="drawingConnection"
@@ -56,7 +56,7 @@
         stroke-width="2"
         stroke-dasharray="5,5"
       />
-      
+
       <!-- 箭头标记定义 -->
       <defs>
         <marker
@@ -74,7 +74,7 @@
     </div>
 
     <!-- 右键菜单 -->
-    <div 
+    <div
       v-if="contextMenu.visible"
       class="context-menu"
       :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
@@ -467,7 +467,7 @@ const handleMouseMove = (e) => {
     drawingConnection.value.toY = (e.clientY - rect.top) / zoomLevel.value
     return
   }
-  
+
   if (isDragging.value && selectedNodeId.value) {
     const rect = containerRef.value.getBoundingClientRect()
     const node = props.nodes.find(n => n.id === selectedNodeId.value)
@@ -486,20 +486,20 @@ const handleMouseUp = (e) => {
     const rect = containerRef.value.getBoundingClientRect()
     const x = (e.clientX - rect.left) / zoomLevel.value
     const y = (e.clientY - rect.top) / zoomLevel.value
-    
+
     // 查找是否释放到了节点的顶部区域
     const targetNode = props.nodes.find(node => {
       const topY = node.y
       const centerX = node.x + node.width / 2
       const nodeWidth = node.width
       // 检查是否在节点顶部区域内
-      return x >= centerX - nodeWidth / 2 && 
-             x <= centerX + nodeWidth / 2 && 
-             y >= topY - 15 && 
+      return x >= centerX - nodeWidth / 2 &&
+             x <= centerX + nodeWidth / 2 &&
+             y >= topY - 15 &&
              y <= topY + 15 &&
              node.id !== connectionStartNode.value.id
     })
-    
+
     if (targetNode) {
       // 检查是否是底事件（底事件下面不能有节点）
       if (connectionStartNode.value.type === 'event-circle') {
@@ -508,12 +508,12 @@ const handleMouseUp = (e) => {
         connectionStartNode.value = null
         return
       }
-      
+
       // 检查连接是否已存在
-      const exists = props.connections.some(conn => 
+      const exists = props.connections.some(conn =>
         conn.from === connectionStartNode.value.id && conn.to === targetNode.id
       )
-      
+
       if (!exists) {
         const connection = {
           id: `conn-${connectionIdCounter++}`,
@@ -523,12 +523,12 @@ const handleMouseUp = (e) => {
         emit('add-connection', connection)
       }
     }
-    
+
     drawingConnection.value = null
     connectionStartNode.value = null
     return
   }
-  
+
   if (isDragging.value) {
     // 自动吸附逻辑：如果节点与父节点水平位置接近，自动垂直对齐
     if (selectedNodeId.value) {
@@ -536,13 +536,13 @@ const handleMouseUp = (e) => {
       if (node) {
         // 查找该节点的父节点（连接到该节点的节点）
         const parentConnections = props.connections.filter(c => c.to === node.id)
-        
+
         for (const conn of parentConnections) {
           const parentNode = props.nodes.find(n => n.id === conn.from)
           if (parentNode) {
             const nodeCenterX = node.x + node.width / 2
             const parentCenterX = parentNode.x + parentNode.width / 2
-            
+
             // 如果中心点距离小于 20px，则自动吸附
             if (Math.abs(nodeCenterX - parentCenterX) < 20) {
               emit('update-node', node.id, {
@@ -566,7 +566,7 @@ const handleKeyDown = (e) => {
     quickConnectionSource.value = null
     return
   }
-  
+
   // 只处理Delete键删除节点，其他快捷键由App.vue处理
   if (e.key === 'Delete' && selectedNodeId.value && !e.ctrlKey && !e.altKey && !e.shiftKey) {
     // 确保不在输入框中
@@ -588,51 +588,51 @@ const handleNodeDoubleClick = (node) => {
     emit('edit-node', node)
     return
   }
-  
+
   // 如果选中了事件或逻辑门工具，自动创建并连接子节点
-  if (props.selectedTool.startsWith('event-') || 
+  if (props.selectedTool.startsWith('event-') ||
       props.selectedTool.startsWith('gate-') ||
       props.selectedTool === 'event-intermediate' ||
       props.selectedTool === 'event-basic' ||
       props.selectedTool === 'event-undeveloped' ||
       props.selectedTool === 'event-conditional') {
-    
+
     // 检查是否是底事件（底事件下面不能有节点）
     if (node.type === 'event-circle') {
       alert('底事件下面不能有节点！')
       return
     }
-    
+
     // 映射工具到节点类型
     const nodeType = mapToolToNodeType(props.selectedTool)
-    
+
     let newNode
     let connection
-    
+
     // 特殊处理条件事件：放在旁边而不是下方
     if (nodeType === 'event-oval' || props.selectedTool === 'event-conditional') {
       // 条件事件：放在顶事件旁边
       const horizontalSpacing = 150  // 水平间距
-      
+
       // 检查左侧和右侧是否有空间
       const leftX = node.x - horizontalSpacing - 100  // 100是节点宽度
       const rightX = node.x + node.width + horizontalSpacing
-      
+
       // 默认放在右侧，如果右侧有冲突则放在左侧
       let newX = rightX
-      
+
       // 检查右侧是否有其他节点
-      const rightConflict = props.nodes.some(otherNode => 
+      const rightConflict = props.nodes.some(otherNode =>
         otherNode.id !== node.id &&
-        otherNode.x >= rightX - 50 && 
+        otherNode.x >= rightX - 50 &&
         otherNode.x <= rightX + 150 &&
         Math.abs(otherNode.y - node.y) < 100
       )
-      
+
       if (rightConflict) {
         newX = leftX
       }
-      
+
       newNode = {
         id: `node-${nodeIdCounter++}`,
         type: nodeType,
@@ -642,7 +642,7 @@ const handleNodeDoubleClick = (node) => {
         height: 50,
         label: getNodeLabel(nodeType)
       }
-      
+
       // 对于条件事件，连接到顶事件的侧面而不是下方
       connection = {
         id: `conn-${connectionIdCounter++}`,
@@ -653,16 +653,16 @@ const handleNodeDoubleClick = (node) => {
       // 其他事件类型：放在下方（原有逻辑）
       // 找出该节点已有的子节点
       const existingChildren = props.connections.filter(conn => conn.from === node.id)
-      const childNodes = existingChildren.map(conn => 
+      const childNodes = existingChildren.map(conn =>
         props.nodes.find(n => n.id === conn.to)
       ).filter(n => n !== undefined)
-      
+
       // 水平间距和垂直间距
       const childSpacing = 130       // 同一父节点的子节点间距
       const verticalOffset = 120     // 垂直间距
-      
+
       let newX = node.x
-      
+
       if (childNodes.length === 0) {
         // 第一个子节点：放在父节点正下方
         newX = node.x
@@ -672,7 +672,7 @@ const handleNodeDoubleClick = (node) => {
         const rightmostChild = sortedChildren[sortedChildren.length - 1]
         newX = rightmostChild.x + childSpacing
       }
-      
+
       newNode = {
         id: `node-${nodeIdCounter++}`,
         type: nodeType,
@@ -682,7 +682,7 @@ const handleNodeDoubleClick = (node) => {
         height: 50,
         label: getNodeLabel(nodeType)
       }
-      
+
       // 创建连接（常规事件连接到父节点下方）
       connection = {
         id: `conn-${connectionIdCounter++}`,
@@ -690,7 +690,7 @@ const handleNodeDoubleClick = (node) => {
         to: newNode.id      // 连接到新节点
       }
     }
-    
+
     // 添加节点
     emit('add-node', newNode)
 
@@ -745,7 +745,7 @@ const getNodeLabel = (type) => {
   cursor: default;
   min-height: 0; /* 重要：允许flex子项正确收缩和滚动 */
   /* 添加网格背景，更容易看出滚动位置 */
-  background-image: 
+  background-image:
     linear-gradient(to right, #f0f0f0 1px, transparent 1px),
     linear-gradient(to bottom, #f0f0f0 1px, transparent 1px);
   background-size: 20px 20px;

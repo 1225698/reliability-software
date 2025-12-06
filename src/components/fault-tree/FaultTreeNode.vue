@@ -1,5 +1,5 @@
 <template>
-  <g 
+  <g
     :class="['node', { selected }]"
     :transform="`translate(${node.x}, ${node.y})`"
     @mousedown="$emit('mousedown', $event)"
@@ -28,7 +28,7 @@
       >
         {{ node.label }}
       </text>
-      
+
       <!-- 下方逻辑门图形 -->
       <g v-if="node.logicGate && node.logicGate !== ''" :transform="`translate(${node.width / 2}, ${node.height + 24})`">
         <!-- AND门图形 -->
@@ -40,11 +40,11 @@
             :stroke-width="1.5"
           />
           <!-- 中心点 -->
-          <circle 
-            cx="0" 
-            cy="-2" 
-            r="2" 
-            :fill="selected ? '#1890ff' : '#333'" 
+          <circle
+            cx="0"
+            cy="-2"
+            r="2"
+            :fill="selected ? '#1890ff' : '#333'"
           />
           <line
             x1="0" y1="-12" x2="0" y2="-24"
@@ -57,7 +57,7 @@
             :stroke-width="1.5"
           />
         </g>
-        
+
         <!-- OR门图形 -->
         <g v-else-if="node.logicGate === 'gate-or'">
           <path
@@ -67,15 +67,15 @@
             :stroke-width="1.5"
           />
           <!-- 中心加号 -->
-          <line 
-            x1="0" y1="-5" x2="0" y2="1" 
-            :stroke="selected ? '#1890ff' : '#333'" 
-            :stroke-width="1.5" 
+          <line
+            x1="0" y1="-5" x2="0" y2="1"
+            :stroke="selected ? '#1890ff' : '#333'"
+            :stroke-width="1.5"
           />
-          <line 
-            x1="-3" y1="-2" x2="3" y2="-2" 
-            :stroke="selected ? '#1890ff' : '#333'" 
-            :stroke-width="1.5" 
+          <line
+            x1="-3" y1="-2" x2="3" y2="-2"
+            :stroke="selected ? '#1890ff' : '#333'"
+            :stroke-width="1.5"
           />
           <line
             x1="0" y1="-24" x2="0" y2="-8"
@@ -118,7 +118,7 @@
             {{ node.voterR ? node.voterR + '/N' : 'r/N' }}
           </text>
         </g>
-        
+
         <!-- 其他逻辑门显示小圆圈标记 -->
         <g v-else>
           <line
@@ -147,7 +147,7 @@
         </g>
       </g>
     </g>
-    
+
     <!-- 底事件 (圆形) -->
     <g v-else-if="node.type === 'event-circle'">
       <!-- 顶部连接线 -->
@@ -179,7 +179,7 @@
         {{ node.label }}
       </text>
     </g>
-    
+
     <!-- 菱形事件 -->
     <g v-else-if="node.type === 'event-diamond'">
       <path
@@ -199,7 +199,7 @@
         {{ node.label }}
       </text>
     </g>
-    
+
     <!-- 椭圆形事件（条件事件） -->
     <g v-else-if="node.type === 'event-oval'">
       <ellipse
@@ -271,7 +271,7 @@
       >
         {{ node.voterR ? node.voterR + '/N' : 'r/N' }}
       </text>
-      
+
       <!-- 连接点 -->
       <g class="connection-point-wrapper" @mousedown.stop="handleConnectionPointClick($event)">
         <circle
@@ -291,10 +291,10 @@
         />
       </g>
     </g>
-    
+
     <!-- 各类逻辑门（AND, OR, XOR, Inhibit, NOT, Voter, Priority-AND, Transfer） -->
     <!-- 省略中间门类型代码（与你原始一致，无需改动） -->
-    
+
     <!-- 转移门 -->
     <g v-else-if="node.type === 'gate-transfer'">
       <rect x="8" y="4" :width="node.width - 16" :height="12"
@@ -323,7 +323,7 @@
         {{ node.label }}
       </text>
     </g>
-    
+
     <!-- 连接点（底部，用于输出连接） -->
     <g class="connection-point-wrapper" @mousedown.stop="handleConnectionPointClick($event)">
       <circle
