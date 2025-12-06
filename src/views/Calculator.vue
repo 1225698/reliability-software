@@ -217,7 +217,7 @@
               <div class="module-ops-bar">
                 <button class="ops-btn purple" @click="openAddSystemModal('import')">导入系统</button>
                 <button class="ops-btn green" @click="openAddSystemModal('manual')">手动添加</button>
-                <button class="ops-btn orange" @click="openVoteModal" :disabled="!canCreateVoteModule">创建表决模块</button>
+                <button class="ops-btn orange" @click="openVoteModal" :disabled="!canCreateVoteModule || !missionTime">创建表决模块</button>
                 <button class="ops-btn danger" @click="clearImportedSystems" :disabled="importedSystems.length===0">清空系统</button>
               </div>
 
@@ -234,45 +234,47 @@
             </div>
           </div>
 
-          <!-- 右侧：任务可靠性结果 -->
+          <!-- 右侧：任务可靠性结果 - 改为与基本可靠性相同样式 -->
           <div class="card card-half">
             <div class="card-title">任务可靠性结果</div>
             <div class="card-content">
-              <div v-if="calculationResults.taskResults">
-                <div class="result-column">
-                  <div class="result-box purple">
-                    <div class="result-label">任务失效率</div>
-                    <div class="result-value">{{ calculationResults.taskResults.observedFailureRate.toExponential(3) }}</div>
-                  </div>
-                  <div class="result-box blue">
-                    <div class="result-label">任务 MTBF</div>
-                    <div class="result-value">{{ isFinite(calculationResults.taskResults.taskMBTF) ? calculationResults.taskResults.taskMBTF.toFixed(2) : '∞' }} h</div>
-                  </div>
-                  <div class="result-box pink">
-                    <div class="result-label">任务可靠度</div>
-                    <div class="result-value">{{ calculationResults.taskResults.taskReliability.toFixed(4) }}</div>
-                  </div>
+              <!-- 纵向排列的结果指标 - 与基本可靠性相同样式 -->
+              <div class="result-column">
+                <div class="result-box purple">
+                  <div class="result-label">任务失效率</div>
+                  <div class="result-value">{{ calculationResults.taskResults ? calculationResults.taskResults.observedFailureRate.toExponential(3) : '--' }}</div>
                 </div>
-                <div class="system-summary">
-                  <strong>计算基于：</strong>
-                  <span>{{ calculationResults.taskResults.systemCount || 0 }} 个系统，</span>
-                  <span>总失效率：{{ calculationResults.taskResults.observedFailureRate.toExponential(6) }}/h</span>
+                <div class="result-box pink">
+                  <div class="result-label">任务可靠度</div>
+                  <div class="result-value">{{ calculationResults.taskResults ? calculationResults.taskResults.taskReliability.toFixed(4) : '--' }}</div>
                 </div>
-
-                <div class="action-buttons">
-                  <button @click="saveTaskReliabilityResults" class="save-btn">
-                    💾 保存任务可靠性结果
-                  </button>
-                  <button @click="showSavedTaskResultsModal = true" class="view-systems-btn" :disabled="savedTaskResults.length === 0">
-                    查看已保存结果
-                  </button>
+                <div class="result-box blue">
+                  <div class="result-label">任务 MTBF</div>
+                  <div class="result-value">{{ calculationResults.taskResults ? (isFinite(calculationResults.taskResults.taskMBTF) ? calculationResults.taskResults.taskMBTF.toFixed(2) : '∞') : '--' }} h</div>
                 </div>
               </div>
-              <div v-else>
-                <p>请先导入系统数据，然后点击下方按钮计算任务可靠性</p>
-                <button @click="computeTask" class="calculate-btn">
-                  计算任务可靠性
+
+              <div class="system-summary" v-if="calculationResults.taskResults">
+                <strong>计算基于：</strong>
+                <span>{{ calculationResults.taskResults.systemCount || 0 }} 个系统，</span>
+                <span>总失效率：{{ calculationResults.taskResults.observedFailureRate.toExponential(6) }}/h</span>
+              </div>
+
+              <div class="action-buttons">
+                <button @click="computeTask" class="calculate-btn" :disabled="!missionTime || taskAssemblyModules.length === 0">计算</button>
+                <button @click="saveTaskReliabilityResults" class="save-btn" :disabled="!calculationResults.taskResults">
+                  保存
                 </button>
+                <button @click="showSavedTaskResultsModal = true" class="view-systems-btn" :disabled="savedTaskResults.length === 0">
+                  查看已保存结果
+                </button>
+              </div>
+
+              <div class="calculation-tip" v-if="!missionTime">
+                <p>⚠️ 请先输入任务时间才能进行计算</p>
+              </div>
+              <div class="calculation-tip" v-else-if="taskAssemblyModules.length === 0">
+                <p>⚠️ 请先导入系统或创建表决模块</p>
               </div>
             </div>
           </div>
@@ -366,27 +368,38 @@
           <div class="modal-body">
             <!-- 步骤一：选择系统 -->
             <template v-if="voteStep === 1">
-              <div class="systems-selection-grid">
-                <div v-for="(item, index) in selectionPool" :key="item.kind + '-' + item.id + '-' + index" class="system-selection-item" :class="{ selected: selectedSystemsForVote.includes(index), 'vote-kind': item.kind==='vote' }">
-                  <div class="system-name" @click="toggleSystemSelection(index)">
-                    {{ item.name }}<span v-if="item.kind==='vote'" class="badge">表决</span>
-                  </div>
-                  <div class="system-details" @click="toggleSystemSelection(index)">
-                    <div>{{ item.kind==='vote' ? '等效故障率' : '失效率' }}: {{ item.failureRate.toExponential(6) }}/h</div>
-                    <div v-if="item.kind==='system'">任务时间: {{ item.missionTime }}h</div>
-                    <div v-else>类型: 表决模块</div>
-                  </div>
-                  <div class="count-editor" v-if="selectedSystemsForVote.includes(index)">
-                    <span class="count-label">数量:</span>
-                    <button class="count-btn" @click="adjustSelectedCount(index,-1)" :disabled="selectedCounts[index]<=1">-</button>
-                    <input class="count-input" v-model.number="selectedCounts[index]" @change="normalizeSelectedCount(index)" />
-                    <button class="count-btn" @click="adjustSelectedCount(index,1)">+</button>
-                  </div>
+              <div v-if="!missionTime" class="time-required-section">
+                <div class="warning-message">
+                  <p>⚠️ 请先在任务参数中输入任务时间，才能创建表决模块</p>
+                  <p>当前任务时间: <span class="warning-text">{{ missionTime || '未设置' }}</span> 小时</p>
+                </div>
+                <div class="modal-footer">
+                  <button @click="closeVoteModal" class="remove-btn">关闭</button>
                 </div>
               </div>
-              <div class="modal-footer">
-                <button @click="createVoteModuleFromSelected" class="calculate-btn" :disabled="selectedSystemsForVote.length === 0">下一步</button>
-                <button @click="closeVoteModal" class="remove-btn">取消</button>
+              <div v-else>
+                <div class="systems-selection-grid">
+                  <div v-for="(item, index) in selectionPool" :key="item.kind + '-' + item.id + '-' + index" class="system-selection-item" :class="{ selected: selectedSystemsForVote.includes(index), 'vote-kind': item.kind==='vote' }">
+                    <div class="system-name" @click="toggleSystemSelection(index)">
+                      {{ item.name }}<span v-if="item.kind==='vote'" class="badge">表决</span>
+                    </div>
+                    <div class="system-details" @click="toggleSystemSelection(index)">
+                      <div>{{ item.kind==='vote' ? '等效故障率' : '失效率' }}: {{ item.failureRate.toExponential(6) }}/h</div>
+                      <div v-if="item.kind==='system'">任务时间: {{ item.missionTime }}h</div>
+                      <div v-else>类型: 表决模块</div>
+                    </div>
+                    <div class="count-editor" v-if="selectedSystemsForVote.includes(index)">
+                      <span class="count-label">数量:</span>
+                      <button class="count-btn" @click="adjustSelectedCount(index,-1)" :disabled="selectedCounts[index]<=1">-</button>
+                      <input class="count-input" v-model.number="selectedCounts[index]" @change="normalizeSelectedCount(index)" />
+                      <button class="count-btn" @click="adjustSelectedCount(index,1)">+</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button @click="createVoteModuleFromSelected" class="calculate-btn" :disabled="selectedSystemsForVote.length === 0">下一步</button>
+                  <button @click="closeVoteModal" class="remove-btn">取消</button>
+                </div>
               </div>
             </template>
             <!-- 步骤二：配置参数 & 计算 -->
@@ -479,7 +492,7 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button class="calculate-btn" @click="computeTaskFromAssembly">基于任务模块计算任务可靠性</button>
+            <button class="calculate-btn" @click="computeTaskFromAssembly" :disabled="!missionTime">基于任务模块计算任务可靠性</button>
             <button class="remove-btn" @click="clearTaskAssemblyModules">清空任务模块</button>
             <button class="save-btn" @click="showTaskModulesModal = false">关闭</button>
           </div>
@@ -590,8 +603,8 @@ const voteModule = ref({
 })
 
 const voteParams = ref({
-  N: 8,
-  k: 4
+  N: null,
+  k: null
 })
 
 const voteParamErrors = ref({
@@ -798,13 +811,6 @@ const addManualSystem = () => {
   // 加入任务模块列表（避免重复）
   addSystemModuleIfMissing(systemData)
 
-  // 重置表单
-  newSystem.value = {
-    name: '',
-    totalFailureRate: 0,
-    missionTime: 1000
-  }
-
   // 自动计算任务可靠性
   setTimeout(() => {
     computeTask()
@@ -911,6 +917,12 @@ const componentSummary = computed(() => {
 
 // 任务计算方法 - 基于导入的系统
 const computeTask = () => {
+  // 检查任务时间是否已输入
+  if (!missionTime.value || missionTime.value <= 0) {
+    alert('请先输入任务时间')
+    return
+  }
+
   // 如果已有任务模块，优先基于任务模块串联
   if (taskAssemblyModules.value.length > 0) {
     computeTaskFromAssembly()
@@ -918,6 +930,7 @@ const computeTask = () => {
   }
   // 回退逻辑：没有任务模块则尝试直接用导入系统生成临时模块
   if (importedSystems.value.length === 0) {
+    alert('请先导入系统或创建表决模块')
     return
   }
   taskAssemblyModules.value = importedSystems.value.map(sys => ({
@@ -934,8 +947,16 @@ const computeTask = () => {
 // 基于任务模块串联计算
 const computeTaskFromAssembly = (autoGenerated = false) => {
   if (taskAssemblyModules.value.length === 0) {
+    alert('请先添加任务模块')
     return
   }
+
+  // 检查任务时间是否已输入
+  if (!missionTime.value || missionTime.value <= 0) {
+    alert('请先输入任务时间')
+    return
+  }
+
   const totalObservedFailureRate = taskAssemblyModules.value.reduce((sum, m) => sum + m.failureRate * (m.count || 1), 0)
   const taskReliability = Math.exp(-totalObservedFailureRate * missionTime.value)
   const taskMBTF = totalObservedFailureRate > 0 ? 1 / totalObservedFailureRate : Infinity
@@ -1095,17 +1116,19 @@ const validateVoteParams = () => {
   const errors = { N: '', k: '' }
   let isValid = true
 
-  if (!Number.isInteger(voteParams.value.N) || voteParams.value.N < 1) {
+  // 修改后的验证逻辑
+  if (voteParams.value.N === null || voteParams.value.N === undefined || !Number.isInteger(voteParams.value.N) || voteParams.value.N < 1) {
     errors.N = '请输入正整数'
     isValid = false
   }
 
-  if (!Number.isInteger(voteParams.value.k) || voteParams.value.k < 1) {
+  if (voteParams.value.k === null || voteParams.value.k === undefined || !Number.isInteger(voteParams.value.k) || voteParams.value.k < 1) {
     errors.k = '请输入正整数'
     isValid = false
   }
 
-  if (voteParams.value.k > voteParams.value.N && !errors.N && !errors.k) {
+  // 只有在两个值都有时才检查 k <= N 的关系
+  if (voteParams.value.N !== null && voteParams.value.k !== null && voteParams.value.k > voteParams.value.N && !errors.N && !errors.k) {
     errors.k = '最小有效数不能大于总模块数'
     isValid = false
   }
@@ -1116,7 +1139,9 @@ const validateVoteParams = () => {
 
 // 计算表决模型等效故障率
 const calculateVoteFailureRate = () => {
-  if (!isVoteParamsValid.value) return
+  if (!isVoteParamsValid.value) {
+    return
+  }
 
   const { N, k } = voteParams.value
   const λ_base = voteModule.value.baseFailureRate
@@ -1140,11 +1165,21 @@ const calculateVoteFailureRate = () => {
 // 打开表决模块弹窗（初始化）
 const openVoteModal = () => {
   if (selectionPool.value.length === 0) {
+    alert('请先导入系统或创建其他表决模块')
     return
   }
+
   voteStep.value = 1
   selectedSystemsForVote.value = []
   selectedCounts.value = []
+
+  // 重置表决参数为空值
+  voteParams.value = { N: null, k: null }
+  voteModule.value = { name: '', baseFailureRate: 0, failureRate: 0 }
+  isVoteCalculated.value = false
+  isVoteParamsValid.value = false
+  voteParamErrors.value = { N: '', k: '' }
+
   showSystemSelection.value = true
 }
 
@@ -1152,7 +1187,7 @@ const openVoteModal = () => {
 const removeSystemVoteModule = () => {
   if (confirm('确定要删除当前表决模块配置吗？')) {
     voteModule.value = { name: '', baseFailureRate: 0, failureRate: 0 }
-    voteParams.value = { N: 8, k: 4 }
+    voteParams.value = { N: null, k: null }
     isVoteCalculated.value = false
     isVoteParamsValid.value = false
     voteParamErrors.value = { N: '', k: '' }
@@ -1166,7 +1201,7 @@ const closeVoteModal = () => {
   // 重置状态
   setTimeout(() => {
     voteModule.value = { name: '', baseFailureRate: 0, failureRate: 0 }
-    voteParams.value = { N: 8, k: 4 }
+    voteParams.value = { N: null, k: null }
     selectedSystemsForVote.value = []
     voteStep.value = 1
     isVoteCalculated.value = false
@@ -1653,9 +1688,15 @@ input:focus {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.calculate-btn:hover {
+.calculate-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.calculate-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .save-btn {
@@ -2351,6 +2392,46 @@ input:focus {
 
 .sub-tab:not(.active):hover {
   background: #dfe5ff;
+}
+
+/* 时间要求提示区域 */
+.time-required-section {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.warning-message {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.warning-message p {
+  margin: 10px 0;
+  color: #856404;
+}
+
+.warning-text {
+  font-weight: bold;
+  color: #e74c3c;
+}
+
+/* 计算提示 */
+.calculation-tip {
+  margin-top: 16px;
+  padding: 12px;
+  background: #fff3cd;
+  border-radius: 6px;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.calculation-tip p {
+  margin: 0;
 }
 
 /* 响应式调整 */
