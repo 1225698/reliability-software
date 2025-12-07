@@ -17,7 +17,7 @@
         :key="index"
         :d="points"
         stroke="black"
-        stroke-width="2"
+        stroke-width="1"
         fill="none"
       />
     </svg>
@@ -50,14 +50,14 @@
       <template v-if="item.modelType === 'redundancy'">
         <div class="redundancy-container" :style="{ width: getRedundancyLayout(item).totalWidth + 'px', height: getRedundancyLayout(item).height + 'px' }">
           <svg class="redundancy-svg" :style="{ width: getRedundancyLayout(item).totalWidth + 'px', height: getRedundancyLayout(item).height + 'px' }">
-            <path :d="`M 0 ${getRedundancyLayout(item).baseCenterY} L ${getRedundancyLayout(item).entryLength} ${getRedundancyLayout(item).baseCenterY}`" fill="none" stroke="black" stroke-width="2"/>
+            <path :d="`M 0 ${getRedundancyLayout(item).baseCenterY} L ${getRedundancyLayout(item).entryLength} ${getRedundancyLayout(item).baseCenterY}`" fill="none" stroke="black" stroke-width="1"/>
             <template v-for="(cy,i) in getRedundancyLayout(item).branchCenters" :key="i">
-              <path :d="`M ${getRedundancyLayout(item).entryLength} ${getRedundancyLayout(item).baseCenterY} L ${getRedundancyLayout(item).branchStartX} ${cy}`" fill="none" stroke="black" stroke-width="2" />
-              <path :d="`M ${getRedundancyLayout(item).branchEndX} ${cy} L ${getRedundancyLayout(item).circleCenterX - getRedundancyLayout(item).circleRadius} ${getRedundancyLayout(item).baseCenterY}`" fill="none" stroke="black" stroke-width="2" />
+              <path :d="`M ${getRedundancyLayout(item).entryLength} ${getRedundancyLayout(item).baseCenterY} L ${getRedundancyLayout(item).branchStartX} ${cy}`" fill="none" stroke="black" stroke-width="1" />
+              <path :d="`M ${getRedundancyLayout(item).branchEndX} ${cy} L ${getRedundancyLayout(item).circleCenterX - getRedundancyLayout(item).circleRadius} ${getRedundancyLayout(item).baseCenterY}`" fill="none" stroke="black" stroke-width="1" />
             </template>
-            <circle :cx="getRedundancyLayout(item).circleCenterX" :cy="getRedundancyLayout(item).baseCenterY" :r="getRedundancyLayout(item).circleRadius" fill="white" stroke="black" stroke-width="2"/>
+            <circle :cx="getRedundancyLayout(item).circleCenterX" :cy="getRedundancyLayout(item).baseCenterY" :r="getRedundancyLayout(item).circleRadius" fill="white" stroke="black" stroke-width="1"/>
             <text :x="getRedundancyLayout(item).circleCenterX" :y="getRedundancyLayout(item).baseCenterY + 5" text-anchor="middle" font-size="16">{{ item.k }}/{{ item.n }}</text>
-            <line :x1="getRedundancyLayout(item).circleCenterX + getRedundancyLayout(item).circleRadius" :y1="getRedundancyLayout(item).baseCenterY" :x2="getRedundancyLayout(item).outputEndX" :y2="getRedundancyLayout(item).baseCenterY" stroke="black" stroke-width="2"/>
+            <line :x1="getRedundancyLayout(item).circleCenterX + getRedundancyLayout(item).circleRadius" :y1="getRedundancyLayout(item).baseCenterY" :x2="getRedundancyLayout(item).outputEndX" :y2="getRedundancyLayout(item).baseCenterY" stroke="black" stroke-width="1"/>
           </svg>
           <div class="redundancy-branches" :style="{ position: 'absolute', top: 0, left: getRedundancyLayout(item).branchStartX + 'px', width: getRedundancyLayout(item).branchWidth + 'px', height: '100%' }">
             <div
@@ -85,11 +85,11 @@
       <template v-else-if="item.modelType === 'parallel'">
         <div class="parallel-container" :style="{ height: getParallelLayout(item).height + 'px', width: getParallelLayout(item).totalWidth + 'px' }">
           <svg class="parallel-svg" :style="{ height: getParallelLayout(item).height + 'px', width: getParallelLayout(item).totalWidth + 'px' }">
-            <path :d="`M 0 ${getParallelLayout(item).centerY} L ${getParallelLayout(item).leftBusX} ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
-            <path :d="`M ${getParallelLayout(item).rightBusX} ${getParallelLayout(item).centerY} L ${getParallelLayout(item).totalWidth} ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
+            <path :d="`M 0 ${getParallelLayout(item).centerY} L ${getParallelLayout(item).leftBusX} ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="1"/>
+            <path :d="`M ${getParallelLayout(item).rightBusX} ${getParallelLayout(item).centerY} L ${getParallelLayout(item).totalWidth} ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="1"/>
             <template v-for="(cy, i) in getParallelLayout(item).branchCenters" :key="i">
-              <path :d="`M ${getParallelLayout(item).leftBusX} ${getParallelLayout(item).centerY} L ${getParallelLayout(item).leftBusX} ${cy} L ${getParallelLayout(item).branchStartX} ${cy}`" fill="none" stroke="black" stroke-width="2"/>
-              <path :d="`M ${getParallelLayout(item).branchEndX} ${cy} L ${getParallelLayout(item).rightBusX} ${cy} L ${getParallelLayout(item).rightBusX} ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="2"/>
+              <path :d="`M ${getParallelLayout(item).leftBusX} ${getParallelLayout(item).centerY} L ${getParallelLayout(item).leftBusX} ${cy} L ${getParallelLayout(item).branchStartX} ${cy}`" fill="none" stroke="black" stroke-width="1"/>
+              <path :d="`M ${getParallelLayout(item).branchEndX} ${cy} L ${getParallelLayout(item).rightBusX} ${cy} L ${getParallelLayout(item).rightBusX} ${getParallelLayout(item).centerY}`" fill="none" stroke="black" stroke-width="1"/>
             </template>
           </svg>
           <div class="parallel-branches" :style="{ height: getParallelLayout(item).height + 'px', width: getParallelLayout(item).totalWidth + 'px' }">
@@ -125,7 +125,7 @@
               :x2="segment.x2"
               :y2="segment.y2"
               stroke="#555"
-              stroke-width="2"
+              stroke-width="1"
             />
           </svg>
           <div
@@ -147,6 +147,13 @@
         </div>
       </template>
 
+      <!-- Ellipsis Model -->
+      <template v-else-if="item.modelType === 'ellipsis'">
+        <div class="ellipsis-box" :style="{ width: '100px', height: '50px', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', fontSize: '20px', letterSpacing: '4px' }">
+          ......
+        </div>
+      </template>
+
       <!-- Other Models (Series, etc.) -->
       <template v-else>
         {{ item.type === 'model' ? item.modelType : item.component.name }}
@@ -156,6 +163,34 @@
           </div>
         </div>
       </template>
+
+      <!-- Repetition Bracket (Single Item) -->
+      <div v-if="item.repetition && item.repetition > 1" class="repetition-bracket" :style="{ position: 'absolute', top: getItemDimensions(item).height + 'px', left: 0, width: getItemDimensions(item).width + 'px', height: '30px', pointerEvents: 'none' }">
+         <svg :width="getItemDimensions(item).width" height="40" style="overflow: visible;">
+             <path :d="`M 10 5 L 20 25 L ${getItemDimensions(item).width - 20} 25 L ${getItemDimensions(item).width - 10} 5`" stroke="#333" stroke-width="1" fill="none" />
+             <rect :x="getItemDimensions(item).width/2 - 20" y="25" width="40" height="18" rx="4" fill="white" stroke="#333" />
+             <text :x="getItemDimensions(item).width/2" y="38" text-anchor="middle" font-size="11">n={{ item.repetition }}</text>
+         </svg>
+      </div>
+    </div>
+
+    <!-- Collapsed Group Brackets -->
+    <div v-for="group in collapsedGroups" :key="group.id"
+         class="repetition-bracket-group"
+         :style="{ position: 'absolute', left: group.rect.x + 'px', top: (group.rect.y + group.rect.height) + 'px', width: group.rect.width + 'px', height: '60px', pointerEvents: 'none' }">
+         <svg :width="group.rect.width" height="60" style="overflow: visible;">
+             <template v-if="group.connectionType === 'voting'">
+                <line :x1="group.rect.width/2" y1="0" :x2="group.rect.width/2" y2="20" stroke="#333" stroke-width="1" />
+                <circle :cx="group.rect.width/2" cy="35" r="15" fill="white" stroke="#333" stroke-width="1" />
+                <text :x="group.rect.width/2" y="39" text-anchor="middle" font-size="11">{{ group.votingK }}/{{ group.count }}</text>
+                <path :d="`M 10 0 L ${group.rect.width - 10} 0`" stroke="#333" stroke-width="1" fill="none" />
+             </template>
+             <template v-else>
+                <path :d="`M 10 5 L 20 25 L ${group.rect.width - 20} 25 L ${group.rect.width - 10} 5`" stroke="#333" stroke-width="1" fill="none" />
+                <rect :x="group.rect.width/2 - 20" y="25" width="40" height="18" rx="4" fill="white" stroke="#333" />
+                <text :x="group.rect.width/2" y="38" text-anchor="middle" font-size="11">n={{ group.count }}</text>
+             </template>
+         </svg>
     </div>
     </div>
 
@@ -173,7 +208,76 @@
         @click="onEditItem"
       >编辑</button>
       <button type="button" @click="onCopyItem">复制</button>
+      <button type="button" @click="onCopyMultipleItem">复制多项</button>
       <button type="button" class="danger" @click="onDeleteItem">删除</button>
+    </div>
+
+    <!-- Copy Multiple Dialog -->
+    <div v-if="showCopyMultipleDialog" class="modal-overlay" @click.self="showCopyMultipleDialog = false">
+      <div class="modal-content">
+        <h3>复制多项</h3>
+        <div class="form-group">
+          <label>复制数量:</label>
+          <input type="number" v-model.number="copyMultipleConfig.count" min="2" max="100" />
+        </div>
+        <div class="form-group">
+          <label>显示方式:</label>
+          <div class="radio-group">
+            <label><input type="radio" v-model="copyMultipleConfig.mode" value="expand" /> 展开 (创建多个副本)</label>
+            <label><input type="radio" v-model="copyMultipleConfig.mode" value="collapse" /> 收拢 (单个聚合视图)</label>
+          </div>
+        </div>
+
+        <div class="form-group" v-if="copyMultipleConfig.mode === 'collapse'">
+          <label>连接方式:</label>
+          <div class="radio-group">
+            <label><input type="radio" v-model="copyMultipleConfig.connectionType" value="series" /> 串联 (n=数量)</label>
+            <label><input type="radio" v-model="copyMultipleConfig.connectionType" value="voting" /> 表决 (k/n)</label>
+          </div>
+        </div>
+
+        <div class="form-group" v-if="copyMultipleConfig.mode === 'collapse' && copyMultipleConfig.connectionType === 'voting'">
+          <label>表决�?(k):</label>
+          <input type="number" v-model.number="copyMultipleConfig.votingK" min="1" :max="copyMultipleConfig.count" />
+        </div>
+        
+        <div class="preview-area">
+           <div class="preview-label">预览:</div>
+           <div class="preview-canvas">
+              <div v-if="copyMultipleConfig.mode === 'collapse'" class="preview-collapsed">
+                 <div class="preview-item-box">
+                    {{ copyMultipleConfig.targetItem?.name || (copyMultipleConfig.isGroup ? '组合容器' : '组件') }}
+                 </div>
+                 <div class="preview-bracket">
+                    <svg width="120" height="60" style="overflow: visible;">
+                       <template v-if="copyMultipleConfig.connectionType === 'voting'">
+                          <line x1="60" y1="0" x2="60" y2="20" stroke="#333" stroke-width="1" />
+                          <circle cx="60" cy="35" r="15" fill="white" stroke="#333" stroke-width="1" />
+                          <text x="60" y="39" text-anchor="middle" font-size="11">{{ copyMultipleConfig.votingK }}/{{ copyMultipleConfig.count }}</text>
+                          <path d="M 10 0 L 110 0" stroke="#333" stroke-width="1" fill="none" />
+                       </template>
+                       <template v-else>
+                          <path d="M 10 5 L 20 20 L 100 20 L 110 5" stroke="#333" stroke-width="1" fill="none" />
+                          <rect x="45" y="20" width="30" height="18" rx="4" fill="white" stroke="#333" />
+                          <text x="60" y="33" text-anchor="middle" font-size="11">n={{ copyMultipleConfig.count }}</text>
+                       </template>
+                    </svg>
+                 </div>
+              </div>
+              <div v-else class="preview-expanded">
+                 <div v-for="i in Math.min(copyMultipleConfig.count, 4)" :key="i" class="preview-item-box small">
+                    {{ copyMultipleConfig.targetItem?.name || (copyMultipleConfig.isGroup ? '组合容器' : '组件') }}
+                 </div>
+                 <div v-if="copyMultipleConfig.count > 4" style="align-self: center;">...</div>
+              </div>
+           </div>
+        </div>
+
+        <div class="modal-actions">
+          <button @click="showCopyMultipleDialog = false">取消</button>
+          <button class="primary" @click="confirmCopyMultiple">确定</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -406,6 +510,46 @@ const SNAP_THRESHOLD = 20;
 const hoveredGroup = ref(null); // { ids:[], bbox }
 const groupDrag = ref({ active: false, offset: {x:0,y:0}, startMouse: {x:0,y:0}, startPositions: {} });
 const contextMenu = ref({ visible: false, x: 0, y: 0, targetType: null, itemId: null, groupIds: [] });
+const draggedPeers = ref([]);
+
+const collapsedGroups = computed(() => {
+  const groups = {};
+  items.value.forEach(item => {
+    if (item.collapsedInfo) {
+      const gid = item.collapsedInfo.id;
+      if (!groups[gid]) {
+        groups[gid] = { 
+           id: gid, 
+           count: item.collapsedInfo.count, 
+           connectionType: item.collapsedInfo.connectionType,
+           votingK: item.collapsedInfo.votingK,
+           items: [] 
+        };
+      }
+      groups[gid].items.push(item);
+    }
+  });
+  return Object.values(groups).map(g => {
+     if (g.items.length === 0) return null;
+     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+     g.items.forEach(item => {
+        const dims = getItemDimensions(item);
+        const x = parseFloat(item.style.left) || 0;
+        const y = parseFloat(item.style.top) || 0;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + dims.width);
+        maxY = Math.max(maxY, y + dims.height);
+     });
+     return {
+        id: g.id,
+        count: g.count,
+        connectionType: g.connectionType,
+        votingK: g.votingK,
+        rect: { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+     };
+  }).filter(Boolean);
+});
 
 // --- Drag and Drop for NEW items from Palette ---
 const onCanvasDrop = (event) => {
@@ -461,7 +605,16 @@ const onCanvasDrop = (event) => {
         if (hasBranchIndex && Array.isArray(targetItem.branches)) {
           const index = parseInt(branchIndex, 10);
           if (!Number.isNaN(index) && targetItem.branches[index]) {
-            targetItem.branches[index].components.push(createComponentInstance(data.component));
+            if (targetItem.modelType === 'redundancy') {
+              // Redundancy: Fill all branches with numbered components
+              targetItem.branches.forEach((branch, i) => {
+                const comp = createComponentInstance(data.component);
+                comp.name = `${data.component.name}${i + 1}`;
+                branch.components = [comp];
+              });
+            } else {
+              targetItem.branches[index].components.push(createComponentInstance(data.component));
+            }
           }
         } else {
           if (!Array.isArray(targetItem.components)) targetItem.components = [];
@@ -694,6 +847,17 @@ const onDeleteItem = () => {
   const item = getContextMenuItem();
   if (!item) return;
   hideContextMenu();
+
+  if (item.collapsedInfo) {
+    const peers = items.value.filter(i => i.collapsedInfo?.id === item.collapsedInfo.id);
+    peers.forEach(p => {
+      removeItemConnections(p.id);
+    });
+    items.value = items.value.filter(i => i.collapsedInfo?.id !== item.collapsedInfo.id);
+    emit('select', null);
+    return;
+  }
+
   removeItemConnections(item.id);
   const index = items.value.findIndex(i => i.id === item.id);
   if (index !== -1) {
@@ -716,6 +880,336 @@ const onCopyItem = () => {
   const copy = cloneItem(source);
   items.value.push(copy);
   nextTick(() => updateItemConnectors(copy.id));
+};
+
+const showCopyMultipleDialog = ref(false);
+const copyMultipleConfig = ref({
+  count: 2,
+  mode: 'expand',
+  targetItem: null,
+  connectionType: 'series',
+  votingK: 1
+});
+
+const onCopyMultipleItem = () => {
+  if (contextMenu.value.targetType === 'group') {
+    // For groups, we currently only support "Expand" mode implicitly or we can show dialog.
+    // Let's show dialog but maybe disable collapse if it's too complex, or implement it.
+    // For now, let's support Expand for groups.
+    copyMultipleConfig.value = {
+      count: 2,
+      mode: 'expand',
+      targetItem: null, // targetItem is null for groups
+      isGroup: true,
+      groupIds: contextMenu.value.groupIds || [],
+      connectionType: 'series',
+      votingK: 1
+    };
+    showCopyMultipleDialog.value = true;
+    hideContextMenu();
+    return;
+  }
+
+  const source = getContextMenuItem();
+  if (!source) {
+    hideContextMenu();
+    return;
+  }
+  hideContextMenu();
+  copyMultipleConfig.value = {
+    count: 2,
+    mode: 'expand',
+    targetItem: source,
+    isGroup: false,
+    connectionType: 'series',
+    votingK: 1
+  };
+  showCopyMultipleDialog.value = true;
+};
+
+const confirmCopyMultiple = () => {
+  const { count, mode, targetItem, isGroup, groupIds, connectionType, votingK } = copyMultipleConfig.value;
+  
+  if (isGroup) {
+    if (mode === 'expand') {
+       for (let i = 0; i < count; i++) {
+          // Copy group logic
+          const uniqueIds = Array.from(new Set(groupIds));
+          if (uniqueIds.length === 0) continue;
+
+          const cloneMap = new Map();
+          const clones = [];
+          const offset = (i + 1) * 20;
+
+          uniqueIds.forEach(id => {
+            const item = items.value.find(it => it.id === id);
+            if (!item) return;
+            const clone = cloneItem(item);
+            // Apply offset
+            const rawLeft = parseFloat(clone.style.left) || 0;
+            const rawTop = parseFloat(clone.style.top) || 0;
+            clone.style.left = `${rawLeft + offset}px`;
+            clone.style.top = `${rawTop + offset}px`;
+            
+            clones.push(clone);
+            cloneMap.set(id, clone.id);
+          });
+
+          if (!clones.length) continue;
+          clones.forEach(clone => items.value.push(clone));
+
+          nextTick(() => {
+            clones.forEach(clone => updateItemConnectors(clone.id));
+            // Recreate internal connections
+            connections.value.forEach(conn => {
+              const fromCloneId = cloneMap.get(conn.from.id);
+              const toCloneId = cloneMap.get(conn.to.id);
+              if (fromCloneId && toCloneId) {
+                 connections.value.push({
+                    from: { id: fromCloneId, type: conn.from.type },
+                    to: { id: toCloneId, type: conn.to.type }
+                 });
+                 const fromItem = items.value.find(it => it.id === fromCloneId);
+                 const toItem = items.value.find(it => it.id === toCloneId);
+                 if (fromItem) fromItem.connectors[conn.from.type].snapped = true;
+                 if (toItem) toItem.connectors[conn.to.type].snapped = true;
+              }
+            });
+          });
+       }
+    } else {
+       // Collapse mode for Groups
+       if (count < 3) {
+          window.alert('收拢模式至少需要3项');
+          showCopyMultipleDialog.value = false;
+          return;
+       }
+
+       const uniqueIds = Array.from(new Set(groupIds));
+       if (uniqueIds.length === 0) return;
+
+       // Calculate source group bounds
+       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+       const sourceItems = [];
+       uniqueIds.forEach(id => {
+          const item = items.value.find(it => it.id === id);
+          if (item) {
+             sourceItems.push(item);
+             const dims = getItemDimensions(item);
+             const x = parseFloat(item.style.left) || 0;
+             const y = parseFloat(item.style.top) || 0;
+             minX = Math.min(minX, x);
+             minY = Math.min(minY, y);
+             maxX = Math.max(maxX, x + dims.width);
+             maxY = Math.max(maxY, y + dims.height);
+          }
+       });
+       const groupWidth = maxX - minX;
+       const groupHeight = maxY - minY;
+       const collapsedId = `group-collapse-${Date.now()}`;
+       const gap = 40;
+       const ellipsisWidth = 100;
+       const ellipsisHeight = 50;
+
+       // Helper to clone a group with offset
+       const cloneGroup = (offsetX, offsetY, role) => {
+          const map = new Map();
+          const clones = [];
+          sourceItems.forEach(item => {
+             const clone = cloneItem(item);
+             const ox = (parseFloat(item.style.left) || 0) - minX;
+             const oy = (parseFloat(item.style.top) || 0) - minY;
+             clone.style.left = `${minX + offsetX + ox}px`;
+             clone.style.top = `${minY + offsetY + oy}px`;
+             clone.collapsedInfo = { id: collapsedId, count, role, connectionType, votingK };
+             clones.push(clone);
+             map.set(item.id, clone.id);
+          });
+          return { clones, map };
+       };
+
+       // 1. Start Group
+       const startOffset = 20;
+       const { clones: startClones, map: startMap } = cloneGroup(startOffset, 20, 'start');
+
+       // 2. Middle Item (Ellipsis)
+       const ellipsisX = minX + startOffset + groupWidth + gap;
+       const ellipsisY = minY + 20 + (groupHeight - ellipsisHeight) / 2;
+       const middleItem = {
+          id: `item-${idCounter++}`,
+          modelType: 'ellipsis',
+          name: '...',
+          style: {
+             position: 'absolute',
+             left: `${ellipsisX}px`,
+             top: `${ellipsisY}px`,
+             zIndex: 1
+          },
+          connectors: {
+             in: { x: 0, y: 0, snapped: false },
+             out: { x: 0, y: 0, snapped: false }
+          },
+          collapsedInfo: { id: collapsedId, count, role: 'middle', connectionType, votingK }
+       };
+
+       // 3. End Group
+       const endOffset = startOffset + groupWidth + gap + ellipsisWidth + gap;
+       const { clones: endClones, map: endMap } = cloneGroup(endOffset, 20, 'end');
+
+       // Add all to items
+       items.value.push(...startClones, middleItem, ...endClones);
+
+       nextTick(() => {
+          // Update connectors
+          [...startClones, middleItem, ...endClones].forEach(i => updateItemConnectors(i.id));
+
+          // Recreate internal connections for Start Group
+          connections.value.forEach(conn => {
+             const fromId = startMap.get(conn.from.id);
+             const toId = startMap.get(conn.to.id);
+             if (fromId && toId) {
+                connections.value.push({ from: { id: fromId, type: conn.from.type }, to: { id: toId, type: conn.to.type } });
+                const f = items.value.find(i => i.id === fromId);
+                const t = items.value.find(i => i.id === toId);
+                if (f) f.connectors[conn.from.type].snapped = true;
+                if (t) t.connectors[conn.to.type].snapped = true;
+             }
+          });
+
+          // Recreate internal connections for End Group
+          connections.value.forEach(conn => {
+             const fromId = endMap.get(conn.from.id);
+             const toId = endMap.get(conn.to.id);
+             if (fromId && toId) {
+                connections.value.push({ from: { id: fromId, type: conn.from.type }, to: { id: toId, type: conn.to.type } });
+                const f = items.value.find(i => i.id === fromId);
+                const t = items.value.find(i => i.id === toId);
+                if (f) f.connectors[conn.from.type].snapped = true;
+                if (t) t.connectors[conn.to.type].snapped = true;
+             }
+          });
+
+          // Try to connect Start -> Middle -> End
+          // Strategy: Find rightmost of Start, leftmost of End
+          let rightmostStart = null;
+          let maxXVal = -Infinity;
+          startClones.forEach(c => {
+             const dims = getItemDimensions(c);
+             const r = (parseFloat(c.style.left)||0) + dims.width;
+             if (r > maxXVal) { maxXVal = r; rightmostStart = c; }
+          });
+
+          let leftmostEnd = null;
+          let minXVal = Infinity;
+          endClones.forEach(c => {
+             const l = parseFloat(c.style.left)||0;
+             if (l < minXVal) { minXVal = l; leftmostEnd = c; }
+          });
+
+          if (rightmostStart) {
+             connections.value.push({ from: { id: rightmostStart.id, type: 'out' }, to: { id: middleItem.id, type: 'in' } });
+             rightmostStart.connectors.out.snapped = true;
+             middleItem.connectors.in.snapped = true;
+          }
+          if (leftmostEnd) {
+             connections.value.push({ from: { id: middleItem.id, type: 'out' }, to: { id: leftmostEnd.id, type: 'in' } });
+             middleItem.connectors.out.snapped = true;
+             leftmostEnd.connectors.in.snapped = true;
+          }
+       });
+    }
+    showCopyMultipleDialog.value = false;
+    return;
+  }
+
+  if (!targetItem || count < 2) {
+    showCopyMultipleDialog.value = false;
+    return;
+  }
+
+  if (mode === 'expand') {
+    for (let i = 0; i < count; i++) {
+      const copy = cloneItem(targetItem);
+      // Offset each copy slightly more
+      const offset = (i + 1) * 20;
+      const rawLeft = parseFloat(targetItem.style.left) || 0;
+      const rawTop = parseFloat(targetItem.style.top) || 0;
+      copy.style.left = `${rawLeft + offset}px`;
+      copy.style.top = `${rawTop + offset}px`;
+      items.value.push(copy);
+      nextTick(() => updateItemConnectors(copy.id));
+    }
+  } else {
+    // Collapse mode
+    if (count < 3) {
+      window.alert('收拢模式至少需要3项');
+      showCopyMultipleDialog.value = false;
+      return;
+    }
+
+    const groupId = `group-${Date.now()}`;
+    const rawLeft = parseFloat(targetItem.style.left) || 0;
+    const rawTop = parseFloat(targetItem.style.top) || 0;
+    const dims = getItemDimensions(targetItem);
+    const gap = 40;
+    const ellipsisWidth = 100;
+    const ellipsisHeight = 50;
+
+    // 1. Start Item
+    const startItem = cloneItem(targetItem);
+    startItem.style.left = `${rawLeft + 20}px`;
+    startItem.style.top = `${rawTop + 20}px`;
+    startItem.collapsedInfo = { id: groupId, count, role: 'start', connectionType, votingK };
+    
+    // 2. Middle Item (Ellipsis)
+    const middleItem = {
+      id: `item-${idCounter++}`,
+      modelType: 'ellipsis',
+      name: '...',
+      style: {
+        position: 'absolute',
+        left: `${rawLeft + 20 + dims.width + gap}px`,
+        top: `${rawTop + 20 + (dims.height - ellipsisHeight) / 2}px`,
+        zIndex: 1
+      },
+      connectors: {
+        in: { x: 0, y: 0, snapped: false },
+        out: { x: 0, y: 0, snapped: false }
+      },
+      collapsedInfo: { id: groupId, count, role: 'middle', connectionType, votingK }
+    };
+
+    // 3. End Item
+    const endItem = cloneItem(targetItem);
+    endItem.style.left = `${rawLeft + 20 + dims.width + gap + ellipsisWidth + gap}px`;
+    endItem.style.top = `${rawTop + 20}px`;
+    endItem.collapsedInfo = { id: groupId, count, role: 'end', connectionType, votingK };
+
+    items.value.push(startItem, middleItem, endItem);
+
+    nextTick(() => {
+      updateItemConnectors(startItem.id);
+      updateItemConnectors(middleItem.id);
+      updateItemConnectors(endItem.id);
+
+      // Add connections: Start -> Middle -> End
+      connections.value.push({
+        from: { id: startItem.id, type: 'out' },
+        to: { id: middleItem.id, type: 'in' }
+      });
+      connections.value.push({
+        from: { id: middleItem.id, type: 'out' },
+        to: { id: endItem.id, type: 'in' }
+      });
+      
+      startItem.connectors.out.snapped = true;
+      middleItem.connectors.in.snapped = true;
+      middleItem.connectors.out.snapped = true;
+      endItem.connectors.in.snapped = true;
+    });
+  }
+  
+  showCopyMultipleDialog.value = false;
 };
 
 const onEditItem = () => {
@@ -827,6 +1321,11 @@ const onItemMouseDown = (item, event) => {
   });
 
   draggedItemId.value = item.id;
+  draggedPeers.value = [];
+  if (item.collapsedInfo) {
+    draggedPeers.value = items.value.filter(i => i.collapsedInfo?.id === item.collapsedInfo.id && i.id !== item.id);
+  }
+
   const rect = event.currentTarget.getBoundingClientRect();
   dragOffset.value = {
     x: (event.clientX - rect.left) / zoomLevel.value,
@@ -875,12 +1374,18 @@ const onCanvasMouseMove = (event) => {
   let newX = (event.clientX - canvasRect.left + scrollLeft) / zoomLevel.value - dragOffset.value.x;
   let newY = (event.clientY - canvasRect.top + scrollTop) / zoomLevel.value - dragOffset.value.y;
 
+  // Calculate delta for peers
+  const oldX = parseFloat(draggedItem.style.left) || 0;
+  const oldY = parseFloat(draggedItem.style.top) || 0;
+  
   // Snapping Logic
   potentialSnap.value = null;
   const draggedItemConnectors = getItemConnectors(draggedItem, newX, newY);
 
   for (const staticItem of items.value) {
     if (staticItem.id === draggedItemId.value) continue;
+    // Skip peers in same collapsed group
+    if (draggedItem.collapsedInfo && staticItem.collapsedInfo?.id === draggedItem.collapsedInfo.id) continue;
 
     const staticItemConnectors = getItemConnectors(staticItem);
 
@@ -919,10 +1424,21 @@ const onCanvasMouseMove = (event) => {
   }
   function goto_snapFound() {}
 
+  const deltaX = newX - oldX;
+  const deltaY = newY - oldY;
 
   draggedItem.style.left = `${newX}px`;
   draggedItem.style.top = `${newY}px`;
   updateItemConnectors(draggedItem.id);
+
+  // Move peers
+  draggedPeers.value.forEach(peer => {
+    const px = parseFloat(peer.style.left) || 0;
+    const py = parseFloat(peer.style.top) || 0;
+    peer.style.left = `${px + deltaX}px`;
+    peer.style.top = `${py + deltaY}px`;
+    updateItemConnectors(peer.id);
+  });
 
   // Move snapped items
   moveSnappedItems(draggedItem, newX, newY);
@@ -999,8 +1515,8 @@ const onCanvasMouseUp = () => {
 function buildGroups() {
   const visited = new Set();
   const groups = [];
-  // 构建邻接表（按模型 id）
   const adj = new Map();
+  // 构建邻接表（按模型 id）
   connections.value.forEach(c => {
     const a = c.from.id;
     const b = c.to.id;
@@ -1043,6 +1559,7 @@ function buildGroups() {
 }
 
 function detectHoveredGroup(event) {
+  let found = null;
   const groups = buildGroups();
   const canvasRect = canvasEl.value.getBoundingClientRect();
   const scrollLeft = canvasEl.value.scrollLeft;
@@ -1050,7 +1567,6 @@ function detectHoveredGroup(event) {
   const mx = (event.clientX - canvasRect.left + scrollLeft) / zoomLevel.value;
   const my = (event.clientY - canvasRect.top + scrollTop) / zoomLevel.value;
   const margin = 15; // 靠近阈值
-  let found = null;
   for (const g of groups) {
     const { left, top, width, height } = g.bbox;
     if (mx >= left - margin && mx <= left + width + margin && my >= top - margin && my <= top + height + margin) {
@@ -1237,6 +1753,11 @@ const getItemDimensions = (item) => {
     height = layout.height;
     inY = layout.baseCenterY;
     outY = layout.baseCenterY;
+  } else if (item.modelType === 'ellipsis') {
+    width = 100;
+    height = 50;
+    inY = 25;
+    outY = 25;
   } else { // Series
     const layout = getSeriesLayout(item);
     width = layout.width;
@@ -1505,6 +2026,9 @@ watch(connections, () => {
   gap: 4px;
   align-items: stretch;
 }
+.component-container:has(.dropped-component) {
+  border-style: solid;
+}
 .dropped-component {
   padding: 2px 4px;
   margin-top: 0;
@@ -1618,5 +2142,117 @@ watch(connections, () => {
 
 .context-menu button.danger {
   color: #c0392b;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.modal-content h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 18px;
+}
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+.form-group input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.radio-group {
+  display: flex;
+  gap: 16px;
+}
+.radio-group label {
+  font-weight: normal;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.preview-area {
+  margin-top: 20px;
+  border: 1px solid #eee;
+  padding: 10px;
+  border-radius: 4px;
+  background: #f9f9f9;
+}
+.preview-label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+}
+.preview-canvas {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+  overflow: hidden;
+}
+.preview-collapsed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.preview-item-box {
+  border: 1px solid #333;
+  padding: 10px 20px;
+  background: #fff;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.preview-item-box.small {
+  padding: 5px 10px;
+  font-size: 12px;
+  margin-right: 5px;
+  margin-bottom: 0;
+}
+.preview-expanded {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+}
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.modal-actions button {
+  padding: 8px 16px;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.modal-actions button.primary {
+  background: #1890ff;
+  color: #fff;
+  border-color: #1890ff;
 }
 </style>

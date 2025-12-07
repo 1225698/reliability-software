@@ -10,7 +10,8 @@
           draggable="true"
           @dragstart="onComponentDragStart(component, $event)"
         >
-          {{ component.name }}
+          <span>{{ component.name }}</span>
+          <button class="delete-btn" @click.stop="removeComponent(component.id)" title="删除">×</button>
         </div>
       </div>
       <div class="card-body actions-body component-actions">
@@ -319,6 +320,13 @@ const addComponentFromRow = (name, reliability) => {
   components.value.push(newComponent);
 };
 
+const removeComponent = (id) => {
+  const index = components.value.findIndex(c => c.id === id);
+  if (index !== -1) {
+    components.value.splice(index, 1);
+  }
+};
+
 const onFileSelected = async (changeEvent) => {
   const file = changeEvent.target?.files?.[0];
   if (!file) return;
@@ -418,19 +426,51 @@ const onFileSelected = async (changeEvent) => {
   gap: 12px;
 }
 .palette-chip {
-  padding: 6px 14px;
+  position: relative;
+  padding: 6px 28px 6px 14px;
   border: 1px solid rgba(0,0,0,0.12);
   border-radius: 999px;
   background: #fff;
   cursor: grab;
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s ease;
   user-select: none;
   font-size: 13px;
+  display: flex;
+  align-items: center;
 }
 .palette-chip:hover {
-  background-color: #edf3ff;
-  border-color: rgba(0,0,0,0.2);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+  background-color: #e6f7ff;
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+  color: #1890ff;
+}
+.palette-chip .delete-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ff4d4f;
+  color: white;
+  border: none;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.palette-chip:hover .delete-btn {
+  display: flex;
+  opacity: 1;
+}
+.palette-chip .delete-btn:hover {
+  background: #ff7875;
 }
 .palette-icon {
   width: 68px;
