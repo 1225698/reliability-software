@@ -240,7 +240,7 @@
           <label>表决�?(k):</label>
           <input type="number" v-model.number="copyMultipleConfig.votingK" min="1" :max="copyMultipleConfig.count" />
         </div>
-        
+
         <div class="preview-area">
            <div class="preview-label">预览:</div>
            <div class="preview-canvas">
@@ -518,12 +518,12 @@ const collapsedGroups = computed(() => {
     if (item.collapsedInfo) {
       const gid = item.collapsedInfo.id;
       if (!groups[gid]) {
-        groups[gid] = { 
-           id: gid, 
-           count: item.collapsedInfo.count, 
+        groups[gid] = {
+           id: gid,
+           count: item.collapsedInfo.count,
            connectionType: item.collapsedInfo.connectionType,
            votingK: item.collapsedInfo.votingK,
-           items: [] 
+           items: []
         };
       }
       groups[gid].items.push(item);
@@ -929,7 +929,7 @@ const onCopyMultipleItem = () => {
 
 const confirmCopyMultiple = () => {
   const { count, mode, targetItem, isGroup, groupIds, connectionType, votingK } = copyMultipleConfig.value;
-  
+
   if (isGroup) {
     if (mode === 'expand') {
        for (let i = 0; i < count; i++) {
@@ -950,7 +950,7 @@ const confirmCopyMultiple = () => {
             const rawTop = parseFloat(clone.style.top) || 0;
             clone.style.left = `${rawLeft + offset}px`;
             clone.style.top = `${rawTop + offset}px`;
-            
+
             clones.push(clone);
             cloneMap.set(id, clone.id);
           });
@@ -1160,7 +1160,7 @@ const confirmCopyMultiple = () => {
     startItem.style.left = `${rawLeft + 20}px`;
     startItem.style.top = `${rawTop + 20}px`;
     startItem.collapsedInfo = { id: groupId, count, role: 'start', connectionType, votingK };
-    
+
     // 2. Middle Item (Ellipsis)
     const middleItem = {
       id: `item-${idCounter++}`,
@@ -1201,14 +1201,14 @@ const confirmCopyMultiple = () => {
         from: { id: middleItem.id, type: 'out' },
         to: { id: endItem.id, type: 'in' }
       });
-      
+
       startItem.connectors.out.snapped = true;
       middleItem.connectors.in.snapped = true;
       middleItem.connectors.out.snapped = true;
       endItem.connectors.in.snapped = true;
     });
   }
-  
+
   showCopyMultipleDialog.value = false;
 };
 
@@ -1377,7 +1377,7 @@ const onCanvasMouseMove = (event) => {
   // Calculate delta for peers
   const oldX = parseFloat(draggedItem.style.left) || 0;
   const oldY = parseFloat(draggedItem.style.top) || 0;
-  
+
   // Snapping Logic
   potentialSnap.value = null;
   const draggedItemConnectors = getItemConnectors(draggedItem, newX, newY);
