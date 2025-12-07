@@ -53,6 +53,16 @@
             <path :d="`M 0 ${getRedundancyLayout(item).baseCenterY} L ${getRedundancyLayout(item).entryLength} ${getRedundancyLayout(item).baseCenterY}`" fill="none" stroke="black" stroke-width="1"/>
             <template v-for="(cy,i) in getRedundancyLayout(item).branchCenters" :key="i">
               <path :d="`M ${getRedundancyLayout(item).entryLength} ${getRedundancyLayout(item).baseCenterY} L ${getRedundancyLayout(item).branchStartX} ${cy}`" fill="none" stroke="black" stroke-width="1" />
+              <line
+                  v-for="j in Math.max(0, getRedundancyLayout(item).seriesCount - 1)"
+                  :key="'gap-'+j"
+                  :x1="getRedundancyLayout(item).branchStartX + j * getRedundancyLayout(item).singleContainerWidth + (j-1) * getRedundancyLayout(item).seriesGap"
+                  :y1="cy"
+                  :x2="getRedundancyLayout(item).branchStartX + j * getRedundancyLayout(item).singleContainerWidth + j * getRedundancyLayout(item).seriesGap"
+                  :y2="cy"
+                  stroke="black"
+                  stroke-width="1"
+              />
               <path :d="`M ${getRedundancyLayout(item).branchEndX} ${cy} L ${getRedundancyLayout(item).circleCenterX - getRedundancyLayout(item).circleRadius} ${getRedundancyLayout(item).baseCenterY}`" fill="none" stroke="black" stroke-width="1" />
             </template>
             <circle :cx="getRedundancyLayout(item).circleCenterX" :cy="getRedundancyLayout(item).baseCenterY" :r="getRedundancyLayout(item).circleRadius" fill="white" stroke="black" stroke-width="1"/>
@@ -63,18 +73,28 @@
             <div
               v-for="(branch, index) in item.branches"
               :key="index"
-              class="component-container"
-              :data-item-id="item.id"
-              :data-branch-index="index"
+              class="redundancy-branch-row"
               :style="{
                 position: 'absolute',
                 top: getRedundancyLayout(item).branchTops[index] + 'px',
                 height: getRedundancyLayout(item).branchHeight + 'px',
-                width: getRedundancyLayout(item).branchWidth + 'px'
+                width: getRedundancyLayout(item).branchWidth + 'px',
+                display: 'flex',
+                gap: '20px'
               }"
             >
-              <div v-for="comp in branch.components" :key="comp.id" class="dropped-component">
-                {{ comp.name }}
+              <div
+                v-for="sIdx in (item.seriesCount || 1)"
+                :key="sIdx"
+                class="component-container"
+                :data-item-id="item.id"
+                :data-branch-index="index"
+                :data-slot="sIdx - 1"
+                :style="{ flex: 1, position: 'relative', minWidth: 0 }"
+              >
+                <div v-for="comp in getRedundancySlotComponents(item, index, sIdx - 1)" :key="comp.id" class="dropped-component">
+                  {{ comp.name }}
+                </div>
               </div>
             </div>
           </div>
@@ -279,6 +299,29 @@
         </div>
       </div>
     </div>
+
+    <!-- Redundancy Edit Dialog -->
+    <div v-if="showRedundancyEditDialog" class="modal-overlay" @click.self="showRedundancyEditDialog = false">
+      <div class="modal-content">
+        <h3>编辑表决模型</h3>
+        <div class="form-group">
+          <label>总分支数 (n):</label>
+          <input type="number" v-model.number="redundancyEditConfig.n" min="1" />
+        </div>
+        <div class="form-group">
+          <label>表决数 (k):</label>
+          <input type="number" v-model.number="redundancyEditConfig.k" min="1" :max="redundancyEditConfig.n" />
+        </div>
+        <div class="form-group">
+          <label>单行串联数量:</label>
+          <input type="number" v-model.number="redundancyEditConfig.seriesCount" min="1" />
+        </div>
+        <div class="modal-actions">
+          <button @click="showRedundancyEditDialog = false">取消</button>
+          <button class="primary" @click="saveRedundancyEdit">确定</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -308,16 +351,16 @@ const SERIES_CONTAINER_HEIGHT = 50;
 const SERIES_HORIZONTAL_GAP = 75; // adjusted spacing for shorter connectors
 const SERIES_MARGIN_X = 20;
 const SERIES_MARGIN_Y = 30;
-const SERIES_MAX_COLUMNS = 4;
+const SERIES_MAX_COLUMNS = 1000;
 const SERIES_VERTICAL_GAP = 60;
-const AUTO_LAYOUT_MAX_PER_ROW = 4;
+const AUTO_LAYOUT_MAX_PER_ROW = 1000;
 const AUTO_LAYOUT_GAP_X = 20;
 const AUTO_LAYOUT_GAP_Y = 100;
 
 const COMPONENT_MIN_WIDTH = 100;
 const COMPONENT_MAX_WIDTH = 240;
 const COMPONENT_MAX_WIDTH_REDUNDANCY = 180;
-const COMPONENT_LABEL_PADDING = 18;
+const COMPONENT_LABEL_PADDING = 24;
 const LABEL_MEASURE_FONT = '500 13px "Microsoft YaHei", sans-serif';
 
 let textMeasureContext = null;
@@ -512,6 +555,25 @@ const groupDrag = ref({ active: false, offset: {x:0,y:0}, startMouse: {x:0,y:0},
 const contextMenu = ref({ visible: false, x: 0, y: 0, targetType: null, itemId: null, groupIds: [] });
 const draggedPeers = ref([]);
 
+const showRedundancyEditDialog = ref(false);
+const redundancyEditConfig = ref({
+  itemId: null,
+  n: 4,
+  k: 2,
+  seriesCount: 1
+});
+
+function getRedundancySlotComponents(item, branchIndex, slotIndex) {
+  if (!item.branches || !item.branches[branchIndex]) return [];
+  const comps = item.branches[branchIndex].components || [];
+  // If seriesCount is 1 or undefined, all components are in slot 0 (or undefined slot)
+  if (!item.seriesCount || item.seriesCount <= 1) {
+     if (slotIndex === 0) return comps;
+     return [];
+  }
+  return comps.filter(c => (c.slot ?? 0) === slotIndex);
+}
+
 const collapsedGroups = computed(() => {
   const groups = {};
   items.value.forEach(item => {
@@ -607,10 +669,14 @@ const onCanvasDrop = (event) => {
           if (!Number.isNaN(index) && targetItem.branches[index]) {
             if (targetItem.modelType === 'redundancy') {
               // Redundancy: Fill all branches with numbered components
+              const slotIndex = slotIndexAttr ? parseInt(slotIndexAttr, 10) : 0;
               targetItem.branches.forEach((branch, i) => {
-                const comp = createComponentInstance(data.component);
+                const comp = createComponentInstance(data.component, slotIndex);
                 comp.name = `${data.component.name}${i + 1}`;
-                branch.components = [comp];
+                if (!branch.components) branch.components = [];
+                // Remove existing component in this slot if any (to avoid stacking in same slot)
+                branch.components = branch.components.filter(c => (c.slot ?? 0) !== slotIndex);
+                branch.components.push(comp);
               });
             } else {
               targetItem.branches[index].components.push(createComponentInstance(data.component));
@@ -1228,20 +1294,13 @@ const onEditItem = () => {
     if (Number.isNaN(desired) || desired < 1) return;
     adjustParallelBranchCount(item, desired);
   } else if (item.modelType === 'redundancy') {
-    const nInput = window.prompt('请输入冗余模型的 n 值', item.n);
-    if (nInput === null) return;
-    let desiredN = parseInt(nInput, 10);
-    if (Number.isNaN(desiredN) || desiredN < 1) desiredN = 1;
-
-    const kInput = window.prompt(`请输入冗余模型的 k 值 (≤ ${desiredN})`, Math.min(item.k, desiredN));
-    if (kInput === null) return;
-    let desiredK = parseInt(kInput, 10);
-    if (Number.isNaN(desiredK) || desiredK < 1) desiredK = 1;
-    if (desiredK > desiredN) desiredK = desiredN;
-
-    item.n = desiredN;
-    item.k = desiredK;
-    adjustRedundancyBranchCount(item, desiredN);
+    redundancyEditConfig.value = {
+      itemId: item.id,
+      n: item.n || 4,
+      k: item.k || 2,
+      seriesCount: item.seriesCount || 1
+    };
+    showRedundancyEditDialog.value = true;
   } else if (item.modelType === 'series') {
     const input = window.prompt('请输入串联容器数量', item.containers ?? 2);
     if (input === null) return;
@@ -1257,6 +1316,23 @@ const onEditItem = () => {
   }
 
   nextTick(() => updateItemConnectors(item.id));
+};
+
+const saveRedundancyEdit = () => {
+  const item = items.value.find(i => i.id === redundancyEditConfig.value.itemId);
+  if (!item) return;
+
+  const { n, k, seriesCount } = redundancyEditConfig.value;
+  const desiredN = Math.max(1, n);
+  const desiredK = Math.max(1, Math.min(k, desiredN));
+  const desiredSeriesCount = Math.max(1, seriesCount);
+
+  item.n = desiredN;
+  item.k = desiredK;
+  item.seriesCount = desiredSeriesCount;
+
+  adjustRedundancyBranchCount(item, desiredN);
+  showRedundancyEditDialog.value = false;
 };
 
 const handleWindowClick = () => hideContextMenu();
@@ -1874,7 +1950,12 @@ function getRedundancyLayout(item) {
   const branchCount = Math.max(1, Array.isArray(item.branches) ? item.branches.length : 0);
   const branchHeight = 40;
   const baseCenterY = 110;
-  const branchWidth = getAdaptiveContainerWidth(item);
+
+  const seriesCount = Math.max(1, item.seriesCount || 1);
+  const singleContainerWidth = getAdaptiveContainerWidth(item);
+  const seriesGap = 20;
+  const branchWidth = seriesCount * singleContainerWidth + (seriesCount - 1) * seriesGap;
+
   const entryLength = 30;
   const branchGap = 20;
   const circleGap = 50;
@@ -1913,6 +1994,9 @@ function getRedundancyLayout(item) {
     baseCenterY,
     totalWidth: outputEndX,
     height,
+    seriesCount,
+    singleContainerWidth,
+    seriesGap
   };
 }
 
@@ -2040,6 +2124,7 @@ watch(connections, () => {
   align-self: stretch;
   background: none;
   border: none;
+  font-size: 13px;
 }
 
 /* Redundancy Model Styles */
