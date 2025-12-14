@@ -1158,7 +1158,6 @@ const calculateVoteFailureRate = () => {
 
   const λ_vote = -Math.log(R_vote) / t
   voteModule.value.failureRate = parseFloat(λ_vote.toFixed(8))
-  taskModules.value[0].failureRate = voteModule.value.failureRate
   isVoteCalculated.value = true
 }
 
